@@ -321,7 +321,7 @@ begin
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email));
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -400,14 +400,23 @@ declare
   v_prefix text;
   v_seq integer;
 begin
+  if not public.is_engagement_member(p_engagement_id) then
+    raise exception 'not a member of this engagement';
+  end if;
+
   update public.engagements
     set next_issue_seq = next_issue_seq + 1
     where id = p_engagement_id
     returning key_prefix, next_issue_seq - 1 into v_prefix, v_seq;
   return v_prefix || '-' || v_seq;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 ```
+
+`is_engagement_member` is defined later, in `0002_rls.sql` — that's fine. Postgres
+does not resolve a plpgsql function body's calls until first execution, not at
+`CREATE FUNCTION` time, and migrations always run 0001 → 0002 → 0003 in order before
+the app goes live (Task 14), so the helper exists by the time this is ever called.
 
 - [ ] **Step 2: Write `supabase/migrations/0002_rls.sql`**
 
@@ -423,7 +432,7 @@ alter table public.issue_attachments enable row level security;
 create or replace function public.is_prometeia_user()
 returns boolean as $$
   select coalesce((select is_prometeia from public.profiles where id = auth.uid()), false);
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public, pg_temp;
 
 create or replace function public.is_engagement_member(p_engagement_id uuid)
 returns boolean as $$
@@ -431,13 +440,43 @@ returns boolean as $$
     select 1 from public.engagement_members
     where engagement_id = p_engagement_id and user_id = auth.uid()
   );
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public, pg_temp;
 
--- profiles: everyone reads all profiles (needed for assignee/author display and
--- email lookup in member management); only the row owner updates their own.
-create policy "profiles_select_all" on public.profiles for select using (true);
+-- profiles: every logged-in user reads all profiles (needed for assignee/author
+-- display and email lookup in member management) — restricted to `authenticated`
+-- so the public anon key can never read this table unauthenticated. Only the row
+-- owner updates their own, and a trigger (below) blocks self-promotion to
+-- is_prometeia through that path.
+create policy "profiles_select_all" on public.profiles for select
+  to authenticated
+  using (true);
 create policy "profiles_update_self" on public.profiles for update
-  using (id = auth.uid());
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+create or replace function public.prevent_self_promote()
+returns trigger as $$
+begin
+  if auth.uid() is not null and new.is_prometeia is distinct from old.is_prometeia then
+    new.is_prometeia := old.is_prometeia;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+create trigger profiles_prevent_self_promote
+  before update on public.profiles
+  for each row execute procedure public.prevent_self_promote();
+```
+
+The trigger only reverts `is_prometeia` when the write comes through an authenticated
+end-user JWT (`auth.uid() is not null`) — a service-role or Supabase SQL Editor
+connection has no JWT, so `auth.uid()` is null there and the write goes through
+untouched. That's the path Task 14's one-time manual promotion
+(`update public.profiles set is_prometeia = true where email = '...'`, run in the SQL
+Editor) relies on.
+
+```sql
 
 -- engagements: members read; only Prometeia creates/updates.
 create policy "engagements_select_members" on public.engagements for select
@@ -460,7 +499,12 @@ create policy "members_delete_prometeia" on public.engagement_members for delete
 create policy "issues_select" on public.issues for select
   using (public.is_engagement_member(engagement_id));
 create policy "issues_insert" on public.issues for insert
-  with check (public.is_engagement_member(engagement_id) and reporter_id = auth.uid());
+  with check (
+    public.is_engagement_member(engagement_id)
+    and reporter_id = auth.uid()
+    and status = 'backlog'
+    and assignee is null
+  );
 create policy "issues_update_prometeia" on public.issues for update
   using (public.is_prometeia_user());
 
@@ -483,7 +527,7 @@ create policy "history_select" on public.issue_history for select
     (select engagement_id from public.issues where id = issue_id)
   ));
 create policy "history_insert_prometeia" on public.issue_history for insert
-  with check (public.is_prometeia_user());
+  with check (public.is_prometeia_user() and changed_by = auth.uid());
 
 -- attachments: any member reads/inserts as themselves.
 create policy "attachments_select" on public.issue_attachments for select
@@ -1438,6 +1482,7 @@ git commit -m "feat: add signup, login, and logout"
 - Create: `lib/data/engagements.ts`
 - Create: `components/Header.tsx`
 - Create: `components/EngagementPicker.tsx`
+- Create: `components/NavTabs.tsx`
 - Create: `app/(app)/layout.tsx`
 - Create: `app/(app)/page.tsx`
 - Create: `app/(app)/[engagementId]/layout.tsx`

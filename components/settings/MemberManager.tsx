@@ -19,12 +19,17 @@ export function MemberManager({
     e.preventDefault();
     setPending(true);
     setMessage(null);
-    const result = await addMemberByEmail(engagementId, email.trim());
-    setPending(false);
-    setMessage(result.message);
-    if (result.ok) {
-      setMembers((prev) => [...prev, { userId: '', email: email.trim(), fullName: null }]);
-      setEmail('');
+    try {
+      const result = await addMemberByEmail(engagementId, email.trim());
+      setMessage(result.message);
+      if (result.ok) {
+        setMembers((prev) => [...prev, { userId: '', email: email.trim(), fullName: null }]);
+        setEmail('');
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not add this member.');
+    } finally {
+      setPending(false);
     }
   }
 

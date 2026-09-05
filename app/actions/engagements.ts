@@ -109,6 +109,7 @@ export async function addMemberByEmail(engagementId: string, email: string): Pro
 export type Member = { userId: string; email: string; fullName: string | null };
 
 export async function listMembers(engagementId: string): Promise<Member[]> {
+  await requireProm();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagement_members')
