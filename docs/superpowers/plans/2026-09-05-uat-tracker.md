@@ -37,7 +37,9 @@ checklist, since no live project exists until the user creates one.
   `#0026FF`. Typefaces: IBM Plex Sans (UI/headings), IBM Plex Mono (ticket keys,
   timestamps, tabular figures) — both via Google Fonts.
 - Every task's file paths are relative to the project root
-  `C:\Users\marraa\Desktop\uat-tracker`.
+  `C:\dev\uat-tracker` (moved here from `Desktop\uat-tracker` during Task 1 — the
+  original location was OneDrive-synced, which corrupts `npm install`; see the
+  ledger for the ruling).
 
 ---
 
