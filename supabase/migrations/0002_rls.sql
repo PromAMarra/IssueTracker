@@ -9,7 +9,7 @@ alter table public.issue_attachments enable row level security;
 create or replace function public.is_prometeia_user()
 returns boolean as $$
   select coalesce((select is_prometeia from public.profiles where id = auth.uid()), false);
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public, pg_temp;
 
 create or replace function public.is_engagement_member(p_engagement_id uuid)
 returns boolean as $$
@@ -17,13 +17,30 @@ returns boolean as $$
     select 1 from public.engagement_members
     where engagement_id = p_engagement_id and user_id = auth.uid()
   );
-$$ language sql stable security definer;
+$$ language sql stable security definer set search_path = public, pg_temp;
 
 -- profiles: everyone reads all profiles (needed for assignee/author display and
 -- email lookup in member management); only the row owner updates their own.
-create policy "profiles_select_all" on public.profiles for select using (true);
+create policy "profiles_select_all" on public.profiles for select
+  to authenticated
+  using (true);
 create policy "profiles_update_self" on public.profiles for update
-  using (id = auth.uid());
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+create or replace function public.prevent_self_promote()
+returns trigger as $$
+begin
+  if auth.uid() is not null and new.is_prometeia is distinct from old.is_prometeia then
+    new.is_prometeia := old.is_prometeia;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+create trigger profiles_prevent_self_promote
+  before update on public.profiles
+  for each row execute procedure public.prevent_self_promote();
 
 -- engagements: members read; only Prometeia creates/updates.
 create policy "engagements_select_members" on public.engagements for select
@@ -46,7 +63,12 @@ create policy "members_delete_prometeia" on public.engagement_members for delete
 create policy "issues_select" on public.issues for select
   using (public.is_engagement_member(engagement_id));
 create policy "issues_insert" on public.issues for insert
-  with check (public.is_engagement_member(engagement_id) and reporter_id = auth.uid());
+  with check (
+    public.is_engagement_member(engagement_id)
+    and reporter_id = auth.uid()
+    and status = 'backlog'
+    and assignee is null
+  );
 create policy "issues_update_prometeia" on public.issues for update
   using (public.is_prometeia_user());
 
@@ -69,7 +91,7 @@ create policy "history_select" on public.issue_history for select
     (select engagement_id from public.issues where id = issue_id)
   ));
 create policy "history_insert_prometeia" on public.issue_history for insert
-  with check (public.is_prometeia_user());
+  with check (public.is_prometeia_user() and changed_by = auth.uid());
 
 -- attachments: any member reads/inserts as themselves.
 create policy "attachments_select" on public.issue_attachments for select

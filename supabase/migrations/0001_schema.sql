@@ -14,7 +14,7 @@ begin
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', new.email));
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -93,10 +93,14 @@ declare
   v_prefix text;
   v_seq integer;
 begin
+  if not public.is_engagement_member(p_engagement_id) then
+    raise exception 'not a member of this engagement';
+  end if;
+
   update public.engagements
     set next_issue_seq = next_issue_seq + 1
     where id = p_engagement_id
     returning key_prefix, next_issue_seq - 1 into v_prefix, v_seq;
   return v_prefix || '-' || v_seq;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
