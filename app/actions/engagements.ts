@@ -1,0 +1,121 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { createServerClient } from '@/lib/supabase/server';
+import { getSessionUser } from '@/lib/auth/session';
+import { keyPrefixFromBankName } from '@/lib/keys';
+import type { SlaDays } from '@/lib/types';
+
+export type EngagementInput = {
+  name: string;
+  bankName: string;
+  modules: string[];
+  teamMembers: string[];
+  slaDays: SlaDays;
+};
+
+async function requireProm() {
+  const session = await getSessionUser();
+  if (!session || !session.profile.is_prometeia) throw new Error('Not authorized');
+  return session;
+}
+
+export async function createEngagement(input: EngagementInput): Promise<string> {
+  const session = await requireProm();
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('engagements')
+    .insert({
+      name: input.name,
+      bank_name: input.bankName,
+      key_prefix: keyPrefixFromBankName(input.bankName),
+      modules: input.modules,
+      team_members: input.teamMembers,
+      sla_days: input.slaDays,
+      created_by: session.id,
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  revalidatePath('/');
+  return data.id as string;
+}
+
+export async function updateEngagementSettings(engagementId: string, input: EngagementInput) {
+  await requireProm();
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from('engagements')
+    .update({
+      name: input.name,
+      bank_name: input.bankName,
+      modules: input.modules,
+      team_members: input.teamMembers,
+      sla_days: input.slaDays,
+    })
+    .eq('id', engagementId);
+  if (error) throw error;
+  revalidatePath(`/${engagementId}/settings`);
+}
+
+export async function uploadBankLogo(engagementId: string, formData: FormData) {
+  await requireProm();
+  const file = formData.get('file');
+  if (!(file instanceof File)) throw new Error('No file provided');
+
+  const supabase = createServerClient();
+  const extension = file.name.split('.').pop() ?? 'png';
+  const path = `${engagementId}/logo-${Date.now()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from('bank-logos')
+    .upload(path, file, { upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data: publicUrlData } = supabase.storage.from('bank-logos').getPublicUrl(path);
+  const { error } = await supabase
+    .from('engagements')
+    .update({ bank_logo_url: publicUrlData.publicUrl })
+    .eq('id', engagementId);
+  if (error) throw error;
+  revalidatePath(`/${engagementId}/settings`);
+}
+
+export type AddMemberResult = { ok: boolean; message: string };
+
+export async function addMemberByEmail(engagementId: string, email: string): Promise<AddMemberResult> {
+  await requireProm();
+  const supabase = createServerClient();
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile) {
+    return { ok: false, message: `No account found for ${email} yet — ask them to sign up first.` };
+  }
+
+  const { error } = await supabase
+    .from('engagement_members')
+    .insert({ engagement_id: engagementId, user_id: profile.id });
+  if (error) {
+    if (error.code === '23505') return { ok: false, message: `${email} is already a member.` };
+    throw error;
+  }
+  revalidatePath(`/${engagementId}/settings`);
+  return { ok: true, message: `${email} added.` };
+}
+
+export type Member = { userId: string; email: string; fullName: string | null };
+
+export async function listMembers(engagementId: string): Promise<Member[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('engagement_members')
+    .select('user_id, profiles(email, full_name)')
+    .eq('engagement_id', engagementId);
+  if (error) throw error;
+  return (data as unknown as { user_id: string; profiles: { email: string; full_name: string | null } }[]).map(
+    (row) => ({ userId: row.user_id, email: row.profiles.email, fullName: row.profiles.full_name }),
+  );
+}
