@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { EngagementPicker } from '@/components/EngagementPicker';
 import { NavTabs } from '@/components/NavTabs';
@@ -9,16 +8,23 @@ export function Header({
   profile,
   engagements,
   current,
+  prometeiaLogoUrl,
 }: {
   profile: Profile;
   engagements: EngagementSummary[];
   current: Engagement;
+  prometeiaLogoUrl: string | null;
 }) {
   return (
     <header className="border-b border-ink-soft/10 bg-white">
       <div className="flex items-center justify-between px-6 py-3">
         <div className="flex items-center gap-4">
-          <Image src="/prometeia-logo.png" alt="Prometeia" width={140} height={45} priority />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={prometeiaLogoUrl ?? '/prometeia-logo.png'}
+            alt="Prometeia"
+            className="h-9 max-w-[160px] object-contain"
+          />
           {current.bank_logo_url && (
             <>
               <span className="h-6 w-px bg-ink-soft/20" />
