@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { listAccessibleEngagements } from '@/lib/data/engagements';
+import { MinimalHeader } from '@/components/MinimalHeader';
 
 export default async function RootPage() {
   const session = await getSessionUser();
@@ -11,13 +12,16 @@ export default async function RootPage() {
   if (session.profile.is_prometeia) redirect('/new-engagement');
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface px-4">
-      <div className="max-w-sm text-center">
-        <h1 className="mb-2 text-lg font-semibold text-ink">No engagement yet</h1>
-        <p className="text-sm text-ink-soft">
-          Ask your Prometeia contact to add {session.email} to a bank engagement.
-        </p>
-      </div>
-    </main>
+    <div className="min-h-screen bg-surface">
+      <MinimalHeader />
+      <main className="flex items-center justify-center px-4 py-20">
+        <div className="max-w-sm text-center">
+          <h1 className="mb-2 text-lg font-semibold text-ink">No engagement yet</h1>
+          <p className="text-sm text-ink-soft">
+            Ask your Prometeia contact to add {session.email} to a bank engagement.
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }
