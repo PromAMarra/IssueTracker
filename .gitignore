@@ -4,3 +4,4 @@ node_modules
 .superpowers/
 .claude/
 test_output.txt
+tsconfig.tsbuildinfo
