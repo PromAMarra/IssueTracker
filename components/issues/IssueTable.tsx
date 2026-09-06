@@ -1,0 +1,159 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { StatusBadge } from './StatusBadge';
+import { PriorityBadge } from './PriorityBadge';
+import { PRIORITIES, STATUSES } from '@/lib/types';
+import type { Issue, Org, Priority, Status } from '@/lib/types';
+
+type SortKey = 'key' | 'title' | 'status' | 'priority' | 'module' | 'assignee' | 'org' | 'created_at';
+
+const STATUS_LABELS: Record<Status, string> = {
+  backlog: 'Backlog',
+  ongoing: 'Ongoing',
+  ready_for_test: 'Ready for Test',
+  closed: 'Closed',
+  rejected: 'Rejected',
+};
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'key', label: 'Key' },
+  { key: 'title', label: 'Title' },
+  { key: 'status', label: 'Status' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'module', label: 'Module' },
+  { key: 'assignee', label: 'Assignee' },
+  { key: 'org', label: 'Raised by' },
+  { key: 'created_at', label: 'Opened' },
+];
+
+export function IssueTable({ issues, modules }: { issues: Issue[]; modules: string[] }) {
+  const [statusFilter, setStatusFilter] = useState<Status | ''>('');
+  const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
+  const [moduleFilter, setModuleFilter] = useState('');
+  const [orgFilter, setOrgFilter] = useState<Org | ''>('');
+  const [sortKey, setSortKey] = useState<SortKey>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const rows = useMemo(() => {
+    let result = issues;
+    if (statusFilter) result = result.filter((i) => i.status === statusFilter);
+    if (priorityFilter) result = result.filter((i) => i.priority === priorityFilter);
+    if (moduleFilter) result = result.filter((i) => (i.module ?? 'Unassigned') === moduleFilter);
+    if (orgFilter) result = result.filter((i) => i.org === orgFilter);
+
+    const sorted = [...result].sort((a, b) => String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? '')));
+    return sortDir === 'asc' ? sorted : sorted.reverse();
+  }, [issues, statusFilter, priorityFilter, moduleFilter, orgFilter, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as Status | '')}
+          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+        >
+          <option value="">All statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
+          className="rounded border border-ink-soft/30 px-2 py-1 text-sm capitalize"
+        >
+          <option value="">All priorities</option>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <select
+          value={moduleFilter}
+          onChange={(e) => setModuleFilter(e.target.value)}
+          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+        >
+          <option value="">All modules</option>
+          {modules.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+          <option value="Unassigned">Unassigned</option>
+        </select>
+        <select
+          value={orgFilter}
+          onChange={(e) => setOrgFilter(e.target.value as Org | '')}
+          className="rounded border border-ink-soft/30 px-2 py-1 text-sm capitalize"
+        >
+          <option value="">Bank + Prometeia</option>
+          <option value="bank">Bank</option>
+          <option value="prometeia">Prometeia</option>
+        </select>
+      </div>
+      <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-ink-soft/10 text-xs uppercase tracking-wide text-ink-soft">
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  className="cursor-pointer whitespace-nowrap px-3 py-2"
+                  onClick={() => toggleSort(col.key)}
+                >
+                  {col.label}
+                  {sortKey === col.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((issue) => (
+              <tr key={issue.id} className="border-b border-ink-soft/5 last:border-0 hover:bg-surface">
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">{issue.key}</td>
+                <td className="px-3 py-2">
+                  <a href={`?issue=${issue.id}`} className="text-ink hover:underline">
+                    {issue.title}
+                  </a>
+                </td>
+                <td className="px-3 py-2">
+                  <StatusBadge status={issue.status} />
+                </td>
+                <td className="px-3 py-2">
+                  <PriorityBadge priority={issue.priority} />
+                </td>
+                <td className="px-3 py-2 text-ink-soft">{issue.module ?? 'Unassigned'}</td>
+                <td className="px-3 py-2 text-ink-soft">{issue.assignee ?? '—'}</td>
+                <td className="px-3 py-2 capitalize text-ink-soft">{issue.org}</td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
+                  {new Date(issue.created_at).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={COLUMNS.length} className="px-3 py-6 text-center text-ink-soft">
+                  No issues match these filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
