@@ -21,7 +21,7 @@ export function EngagementPicker({
         if (e.target.value === '__new__') router.push('/new-engagement');
         else router.push(`/${e.target.value}/board`);
       }}
-      className="rounded border border-white/20 bg-brand-navy-2 px-2 py-1 text-sm text-white"
+      className="rounded border border-ink-soft/30 bg-white px-2 py-1 text-sm text-ink"
     >
       {engagements.map((e) => (
         <option key={e.id} value={e.id}>

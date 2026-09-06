@@ -15,13 +15,13 @@ export function Header({
   current: Engagement;
 }) {
   return (
-    <header className="bg-brand-navy text-white">
+    <header className="border-b border-ink-soft/10 bg-white">
       <div className="flex items-center justify-between px-6 py-3">
         <div className="flex items-center gap-4">
-          <Image src="/prometeia-logo.png" alt="Prometeia" width={120} height={38} priority />
+          <Image src="/prometeia-logo.png" alt="Prometeia" width={140} height={45} priority />
           {current.bank_logo_url && (
             <>
-              <span className="h-6 w-px bg-white/20" />
+              <span className="h-6 w-px bg-ink-soft/20" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={current.bank_logo_url}
@@ -37,7 +37,7 @@ export function Header({
             currentId={current.id}
             canCreate={profile.is_prometeia}
           />
-          <span className="text-sm text-white/70">{profile.full_name ?? profile.email}</span>
+          <span className="text-sm text-ink-soft">{profile.full_name ?? profile.email}</span>
           <LogoutButton />
         </div>
       </div>

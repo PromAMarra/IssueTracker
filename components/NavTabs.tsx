@@ -14,7 +14,7 @@ export function NavTabs({ engagementId, isProm }: { engagementId: string; isProm
   const tabs = isProm ? [...TABS, { href: 'settings', label: 'Settings' }] : TABS;
 
   return (
-    <nav className="flex gap-1 border-t border-white/10 px-6">
+    <nav className="flex gap-1 border-t border-ink-soft/10 px-6">
       {tabs.map((tab) => {
         const href = `/${engagementId}/${tab.href}`;
         const active = pathname === href;
@@ -23,7 +23,7 @@ export function NavTabs({ engagementId, isProm }: { engagementId: string; isProm
             key={tab.href}
             href={href}
             className={`px-3 py-2 text-sm ${
-              active ? 'border-b-2 border-brand-green-bright text-white' : 'text-white/70 hover:text-white'
+              active ? 'border-b-2 border-brand-navy font-medium text-ink' : 'text-ink-soft hover:text-ink'
             }`}
           >
             {tab.label}
