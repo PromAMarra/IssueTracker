@@ -11,6 +11,8 @@ export type Issue = {
   status: Status;
   priority: Priority;
   module: string | null;
+  test_case_package: string | null;
+  test_case_step: string | null;
   org: Org;
   reporter_id: string;
   assignee: string | null;

@@ -9,7 +9,6 @@ import {
   updateIssueModule,
   updateIssuePriority,
   updateIssueStatus,
-  uploadAttachment,
   type IssueDetail,
 } from '@/app/actions/issues';
 import { StatusBadge } from './StatusBadge';
@@ -19,13 +18,11 @@ import type { Priority, Status } from '@/lib/types';
 
 export function IssueDetailModal({
   issueId,
-  engagementId,
   isProm,
   modules,
   teamMembers,
 }: {
   issueId: string;
-  engagementId: string;
   isProm: boolean;
   modules: string[];
   teamMembers: string[];
@@ -87,21 +84,6 @@ export function IssueDetailModal({
     }
   }
 
-  async function handleFile(file: File) {
-    setBusy(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.set('file', file);
-      await uploadAttachment(issueId, engagementId, formData);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload this file.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (loadFailed) {
     return (
       <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
@@ -136,7 +118,9 @@ export function IssueDetailModal({
       >
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <span className="font-mono text-xs text-ink-soft">{issue.key}</span>
+            <span className="font-mono text-xs text-ink-soft">
+              {issue.key} · Reported {new Date(issue.created_at).toLocaleDateString()}
+            </span>
             <h2 className="text-lg font-semibold text-ink">{issue.title}</h2>
           </div>
           <button onClick={close} className="text-ink-soft hover:text-ink" aria-label="Close">
@@ -145,6 +129,23 @@ export function IssueDetailModal({
         </div>
 
         <p className="mb-4 whitespace-pre-wrap text-sm text-ink">{issue.description}</p>
+
+        {(issue.test_case_package || issue.test_case_step) && (
+          <div className="mb-4 flex flex-col gap-1 rounded border border-ink-soft/10 bg-surface p-3 text-sm">
+            {issue.test_case_package && (
+              <p>
+                <span className="font-medium text-ink">Test case package:</span>{' '}
+                <span className="text-ink-soft">{issue.test_case_package}</span>
+              </p>
+            )}
+            {issue.test_case_step && (
+              <p className="whitespace-pre-wrap">
+                <span className="font-medium text-ink">Test case step:</span>{' '}
+                <span className="text-ink-soft">{issue.test_case_step}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
@@ -232,20 +233,9 @@ export function IssueDetailModal({
                 </a>
               </li>
             ))}
-            {attachments.length === 0 && <li className="text-sm text-ink-soft">No attachments yet.</li>}
+            {attachments.length === 0 && <li className="text-sm text-ink-soft">No attachments.</li>}
           </ul>
-          <label className="cursor-pointer text-sm text-brand-blue hover:underline">
-            Attach a file
-            <input
-              type="file"
-              className="hidden"
-              disabled={busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
-              }}
-            />
-          </label>
+          <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
         </section>
 
         <section className="mb-6">

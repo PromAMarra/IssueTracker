@@ -11,6 +11,8 @@ export type CreateIssueInput = {
   description: string;
   priority: Priority;
   module: string | null;
+  testCasePackage: string | null;
+  testCaseStep: string;
 };
 
 export async function createIssue(input: CreateIssueInput): Promise<string> {
@@ -19,20 +21,26 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
 
   const title = input.title.trim();
   const description = input.description.trim();
+  const testCaseStep = input.testCaseStep.trim();
   if (!title || title.length > 200) throw new Error('Title must be 1-200 characters.');
   if (!description || description.length > 5000) {
     throw new Error('Description must be 1-5000 characters.');
   }
+  if (testCaseStep.length > 2000) throw new Error('Test case step must be at most 2000 characters.');
 
   const supabase = createServerClient();
 
   const { data: engagement, error: engagementError } = await supabase
     .from('engagements')
-    .select('modules')
+    .select('modules, test_case_packages')
     .eq('id', input.engagementId)
     .single();
   if (engagementError) throw engagementError;
   const module = input.module && engagement.modules.includes(input.module) ? input.module : null;
+  const testCasePackage =
+    input.testCasePackage && engagement.test_case_packages.includes(input.testCasePackage)
+      ? input.testCasePackage
+      : null;
 
   const { data: keyData, error: keyError } = await supabase.rpc('next_issue_key', {
     p_engagement_id: input.engagementId,
@@ -48,6 +56,8 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
       description,
       priority: input.priority,
       module,
+      test_case_package: testCasePackage,
+      test_case_step: testCaseStep || null,
       org: session.profile.is_prometeia ? 'prometeia' : 'bank',
       reporter_id: session.id,
     })

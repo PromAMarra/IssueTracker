@@ -6,7 +6,9 @@ import type { SlaDays } from '@/lib/types';
 export type EngagementConfigValues = {
   name: string;
   bankName: string;
+  keyPrefix: string;
   modules: string[];
+  testCasePackages: string[];
   teamMembers: string[];
   slaDays: SlaDays;
 };
@@ -31,7 +33,9 @@ export function EngagementConfigForm({
 }) {
   const [name, setName] = useState(initial.name);
   const [bankName, setBankName] = useState(initial.bankName);
+  const [keyPrefix, setKeyPrefix] = useState(initial.keyPrefix);
   const [modules, setModules] = useState(initial.modules.join(', '));
+  const [testCasePackages, setTestCasePackages] = useState(initial.testCasePackages.join(', '));
   const [teamMembers, setTeamMembers] = useState(initial.teamMembers.join(', '));
   const [sla, setSla] = useState(initial.slaDays);
   const [saving, setSaving] = useState(false);
@@ -45,7 +49,9 @@ export function EngagementConfigForm({
       await onSubmit({
         name,
         bankName,
+        keyPrefix,
         modules: splitList(modules),
+        testCasePackages: splitList(testCasePackages),
         teamMembers: splitList(teamMembers),
         slaDays: sla,
       });
@@ -77,11 +83,32 @@ export function EngagementConfigForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
+        Ticket ID prefix
+        <input
+          value={keyPrefix}
+          onChange={(e) => setKeyPrefix(e.target.value)}
+          placeholder="e.g. ESUP (leave blank to auto-generate from the bank name)"
+          className="rounded border border-ink-soft/30 px-3 py-2 font-mono uppercase"
+        />
+        <span className="text-xs font-normal normal-case text-ink-soft">
+          Only affects new tickets — existing ones keep their current IDs.
+        </span>
+      </label>
+      <label className="flex flex-col gap-1 text-sm text-ink">
         Modules (comma-separated)
         <input
           value={modules}
           onChange={(e) => setModules(e.target.value)}
           placeholder="Payments, Onboarding, Reporting"
+          className="rounded border border-ink-soft/30 px-3 py-2"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm text-ink">
+        Test case packages (comma-separated)
+        <input
+          value={testCasePackages}
+          onChange={(e) => setTestCasePackages(e.target.value)}
+          placeholder="Onboarding Suite, Payments Suite, Regression Pack"
           className="rounded border border-ink-soft/30 px-3 py-2"
         />
       </label>

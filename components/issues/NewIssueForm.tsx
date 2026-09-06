@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { createIssue } from '@/app/actions/issues';
+import { createIssue, uploadAttachment } from '@/app/actions/issues';
 import type { Priority } from '@/lib/types';
 
 const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
@@ -10,10 +10,12 @@ const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
 export function NewIssueForm({
   engagementId,
   modules,
+  testCasePackages,
   onCreated,
 }: {
   engagementId: string;
   modules: string[];
+  testCasePackages: string[];
   onCreated?: () => void;
 }) {
   const router = useRouter();
@@ -21,6 +23,10 @@ export function NewIssueForm({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [module, setModule] = useState(modules[0] ?? '');
+  const [testCasePackage, setTestCasePackage] = useState(testCasePackages[0] ?? '');
+  const [testCaseStep, setTestCaseStep] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,9 +35,28 @@ export function NewIssueForm({
     setSubmitting(true);
     setError(null);
     try {
-      await createIssue({ engagementId, title, description, priority, module: module || null });
+      const issueId = await createIssue({
+        engagementId,
+        title,
+        description,
+        priority,
+        module: module || null,
+        testCasePackage: testCasePackage || null,
+        testCaseStep,
+      });
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.set('file', file);
+        // eslint-disable-next-line no-await-in-loop
+        await uploadAttachment(issueId, engagementId, formData);
+      }
+
       setTitle('');
       setDescription('');
+      setTestCaseStep('');
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       router.refresh();
       onCreated?.();
     } catch (err) {
@@ -58,7 +83,7 @@ export function NewIssueForm({
         rows={3}
         className="rounded border border-ink-soft/30 px-3 py-2 text-sm"
       />
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as Priority)}
@@ -82,7 +107,36 @@ export function NewIssueForm({
             </option>
           ))}
         </select>
+        <select
+          value={testCasePackage}
+          onChange={(e) => setTestCasePackage(e.target.value)}
+          className="rounded border border-ink-soft/30 px-2 py-2 text-sm"
+        >
+          <option value="">No test case package</option>
+          {testCasePackages.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
       </div>
+      <textarea
+        placeholder="Test case step (optional)"
+        value={testCaseStep}
+        onChange={(e) => setTestCaseStep(e.target.value)}
+        rows={2}
+        className="rounded border border-ink-soft/30 px-3 py-2 text-sm"
+      />
+      <label className="flex flex-col gap-1 text-sm text-ink-soft">
+        Attachments (optional — cannot be added after the ticket is reported)
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
+          className="text-sm"
+        />
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"

@@ -23,6 +23,8 @@ function issue(overrides: Partial<Issue>): Issue {
     status: 'backlog',
     priority: 'medium',
     module: 'Payments',
+    test_case_package: null,
+    test_case_step: null,
     org: 'bank',
     reporter_id: 'u1',
     assignee: null,

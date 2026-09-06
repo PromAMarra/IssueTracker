@@ -29,7 +29,9 @@ export default async function SettingsPage({ params }: { params: { engagementId:
           initial={{
             name: engagement.name,
             bankName: engagement.bank_name,
+            keyPrefix: engagement.key_prefix,
             modules: engagement.modules,
+            testCasePackages: engagement.test_case_packages,
             teamMembers: engagement.team_members,
             slaDays: engagement.sla_days,
           }}

@@ -7,6 +7,7 @@ export type Engagement = EngagementSummary & {
   bank_logo_url: string | null;
   key_prefix: string;
   modules: string[];
+  test_case_packages: string[];
   team_members: string[];
   sla_days: SlaDays;
 };
@@ -25,7 +26,7 @@ export async function getEngagement(id: string): Promise<Engagement | null> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagements')
-    .select('id, name, bank_name, bank_logo_url, key_prefix, modules, team_members, sla_days')
+    .select('id, name, bank_name, bank_logo_url, key_prefix, modules, test_case_packages, team_members, sla_days')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;

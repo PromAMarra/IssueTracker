@@ -24,12 +24,15 @@ export default async function BoardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <NewIssueForm engagementId={engagement.id} modules={engagement.modules} />
+      <NewIssueForm
+        engagementId={engagement.id}
+        modules={engagement.modules}
+        testCasePackages={engagement.test_case_packages}
+      />
       <Board issues={issues} teamMembers={engagement.team_members} isProm={session.profile.is_prometeia} />
       {searchParams.issue && (
         <IssueDetailModal
           issueId={searchParams.issue}
-          engagementId={engagement.id}
           isProm={session.profile.is_prometeia}
           modules={engagement.modules}
           teamMembers={engagement.team_members}

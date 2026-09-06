@@ -3,13 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
-import { keyPrefixFromBankName } from '@/lib/keys';
+import { keyPrefixFromBankName, sanitizeKeyPrefix } from '@/lib/keys';
 import type { SlaDays } from '@/lib/types';
 
 export type EngagementInput = {
   name: string;
   bankName: string;
+  keyPrefix: string;
   modules: string[];
+  testCasePackages: string[];
   teamMembers: string[];
   slaDays: SlaDays;
 };
@@ -28,8 +30,9 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
     .insert({
       name: input.name,
       bank_name: input.bankName,
-      key_prefix: keyPrefixFromBankName(input.bankName),
+      key_prefix: input.keyPrefix.trim() ? sanitizeKeyPrefix(input.keyPrefix) : keyPrefixFromBankName(input.bankName),
       modules: input.modules,
+      test_case_packages: input.testCasePackages,
       team_members: input.teamMembers,
       sla_days: input.slaDays,
       created_by: session.id,
@@ -49,7 +52,9 @@ export async function updateEngagementSettings(engagementId: string, input: Enga
     .update({
       name: input.name,
       bank_name: input.bankName,
+      key_prefix: sanitizeKeyPrefix(input.keyPrefix),
       modules: input.modules,
+      test_case_packages: input.testCasePackages,
       team_members: input.teamMembers,
       sla_days: input.slaDays,
     })
