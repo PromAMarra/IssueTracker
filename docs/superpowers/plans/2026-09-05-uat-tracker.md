@@ -2516,7 +2516,7 @@ const DOT_COLOR: Record<Priority, string> = {
   critical: '#B42318',
   high: '#DC5F45',
   medium: '#E8896A',
-  low: '#94A3B8',
+  low: '#F0B8A8',
 };
 
 const LABELS: Record<Priority, string> = {
@@ -3800,7 +3800,7 @@ const COLORS: Record<Priority, string> = {
   critical: '#B42318',
   high: '#DC5F45',
   medium: '#E8896A',
-  low: '#94A3B8',
+  low: '#F0B8A8',
 };
 
 export function PriorityDistributionChart({ distribution }: { distribution: Record<Priority, number> }) {
