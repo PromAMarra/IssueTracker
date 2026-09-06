@@ -56,8 +56,8 @@ Open http://localhost:3000 — it redirects to `/login`.
 
 ### 5. Deploy to Vercel
 
-1. Push this repository to a GitHub repo (`git remote add origin <your repo
-   URL>`, `git push -u origin main`).
+1. Push this repository to a GitHub repo (already done —
+   https://github.com/PromAMarra/IssueTracker, branch `master`).
 2. Go to https://vercel.com, create a free account, "Add New Project", import the
    GitHub repo.
 3. In the project's **Environment Variables** settings, add
