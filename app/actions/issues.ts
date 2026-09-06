@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
-import type { Priority, Status } from '@/lib/types';
+import type { Issue, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
   engagementId: string;
@@ -120,4 +120,158 @@ export async function updateIssueAssignee(issueId: string, newAssignee: string |
   await recordHistory(supabase, issueId, 'assignee', current.assignee, newAssignee ?? 'Unassigned', session.id);
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
+}
+
+export async function updateIssueModule(issueId: string, newModule: string | null) {
+  const session = await requireProm();
+  const supabase = createServerClient();
+  const { data: current, error: fetchError } = await supabase
+    .from('issues')
+    .select('module, engagement_id')
+    .eq('id', issueId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const { error } = await supabase.from('issues').update({ module: newModule }).eq('id', issueId);
+  if (error) throw error;
+  await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id);
+  revalidatePath(`/${current.engagement_id}/board`);
+  revalidatePath(`/${current.engagement_id}/list`);
+}
+
+export async function addComment(issueId: string, body: string) {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const supabase = createServerClient();
+  const { error } = await supabase
+    .from('issue_comments')
+    .insert({ issue_id: issueId, author_id: session.id, body });
+  if (error) throw error;
+}
+
+export type CommentRow = { id: string; body: string; createdAt: string; authorName: string };
+
+export async function listComments(issueId: string): Promise<CommentRow[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('issue_comments')
+    .select('id, body, created_at, profiles(full_name, email)')
+    .eq('issue_id', issueId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data as unknown as { id: string; body: string; created_at: string; profiles: { full_name: string | null; email: string } }[]).map(
+    (row) => ({
+      id: row.id,
+      body: row.body,
+      createdAt: row.created_at,
+      authorName: row.profiles.full_name ?? row.profiles.email,
+    }),
+  );
+}
+
+export type HistoryRow = {
+  id: string;
+  field: string;
+  fromValue: string | null;
+  toValue: string;
+  changedAt: string;
+  changedByName: string;
+};
+
+export async function listHistory(issueId: string): Promise<HistoryRow[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('issue_history')
+    .select('id, field, from_value, to_value, changed_at, profiles(full_name, email)')
+    .eq('issue_id', issueId)
+    .order('changed_at', { ascending: false });
+  if (error) throw error;
+  return (
+    data as unknown as {
+      id: string;
+      field: string;
+      from_value: string | null;
+      to_value: string;
+      changed_at: string;
+      profiles: { full_name: string | null; email: string };
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    field: row.field,
+    fromValue: row.from_value,
+    toValue: row.to_value,
+    changedAt: row.changed_at,
+    changedByName: row.profiles.full_name ?? row.profiles.email,
+  }));
+}
+
+export type AttachmentRow = { id: string; fileName: string; url: string; uploadedByName: string; uploadedAt: string };
+
+export async function listAttachments(issueId: string): Promise<AttachmentRow[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('issue_attachments')
+    .select('id, storage_path, file_name, uploaded_at, profiles(full_name, email)')
+    .eq('issue_id', issueId)
+    .order('uploaded_at', { ascending: true });
+  if (error) throw error;
+
+  const rows = data as unknown as {
+    id: string;
+    storage_path: string;
+    file_name: string;
+    uploaded_at: string;
+    profiles: { full_name: string | null; email: string };
+  }[];
+
+  return Promise.all(
+    rows.map(async (row) => {
+      const { data: signed } = await supabase.storage
+        .from('issue-attachments')
+        .createSignedUrl(row.storage_path, 3600);
+      return {
+        id: row.id,
+        fileName: row.file_name,
+        url: signed?.signedUrl ?? '',
+        uploadedByName: row.profiles.full_name ?? row.profiles.email,
+        uploadedAt: row.uploaded_at,
+      };
+    }),
+  );
+}
+
+export async function uploadAttachment(issueId: string, engagementId: string, formData: FormData) {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const file = formData.get('file');
+  if (!(file instanceof File)) throw new Error('No file provided');
+
+  const supabase = createServerClient();
+  const path = `${engagementId}/${issueId}/${Date.now()}-${file.name}`;
+  const { error: uploadError } = await supabase.storage.from('issue-attachments').upload(path, file);
+  if (uploadError) throw uploadError;
+
+  const { error } = await supabase
+    .from('issue_attachments')
+    .insert({ issue_id: issueId, storage_path: path, file_name: file.name, uploaded_by: session.id });
+  if (error) throw error;
+}
+
+export type IssueDetail = {
+  issue: Issue;
+  comments: CommentRow[];
+  history: HistoryRow[];
+  attachments: AttachmentRow[];
+};
+
+export async function getIssueDetail(issueId: string): Promise<IssueDetail> {
+  const supabase = createServerClient();
+  const { data: issue, error } = await supabase.from('issues').select('*').eq('id', issueId).single();
+  if (error) throw error;
+  const [comments, history, attachments] = await Promise.all([
+    listComments(issueId),
+    listHistory(issueId),
+    listAttachments(issueId),
+  ]);
+  return { issue: issue as Issue, comments, history, attachments };
 }

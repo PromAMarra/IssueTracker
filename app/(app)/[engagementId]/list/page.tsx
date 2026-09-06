@@ -3,8 +3,15 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement } from '@/lib/data/engagements';
 import { listIssues } from '@/lib/data/issues';
 import { IssueTable } from '@/components/issues/IssueTable';
+import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
 
-export default async function ListPage({ params }: { params: { engagementId: string } }) {
+export default async function ListPage({
+  params,
+  searchParams,
+}: {
+  params: { engagementId: string };
+  searchParams: { issue?: string };
+}) {
   const session = await getSessionUser();
   if (!session) redirect('/login');
 
@@ -14,5 +21,18 @@ export default async function ListPage({ params }: { params: { engagementId: str
   ]);
   if (!engagement) redirect('/');
 
-  return <IssueTable issues={issues} modules={engagement.modules} />;
+  return (
+    <>
+      <IssueTable issues={issues} modules={engagement.modules} />
+      {searchParams.issue && (
+        <IssueDetailModal
+          issueId={searchParams.issue}
+          engagementId={engagement.id}
+          isProm={session.profile.is_prometeia}
+          modules={engagement.modules}
+          teamMembers={engagement.team_members}
+        />
+      )}
+    </>
+  );
 }
