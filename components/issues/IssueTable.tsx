@@ -5,6 +5,7 @@ import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
+import { downloadWorkbook } from '@/lib/exportXlsx';
 
 type SortKey = 'key' | 'title' | 'status' | 'priority' | 'module' | 'assignee' | 'org' | 'created_at';
 
@@ -55,9 +56,30 @@ export function IssueTable({ issues, modules }: { issues: Issue[]; modules: stri
     }
   }
 
+  function handleExport() {
+    downloadWorkbook(
+      [
+        {
+          name: 'Issues',
+          rows: rows.map((issue) => ({
+            Key: issue.key,
+            Title: issue.title,
+            Status: STATUS_LABELS[issue.status],
+            Priority: issue.priority,
+            Module: issue.module ?? 'Unassigned',
+            Assignee: issue.assignee ?? '',
+            'Raised by': issue.org,
+            Opened: new Date(issue.created_at).toLocaleDateString(),
+          })),
+        },
+      ],
+      `issues-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as Status | '')}
@@ -104,6 +126,14 @@ export function IssueTable({ issues, modules }: { issues: Issue[]; modules: stri
           <option value="bank">Bank</option>
           <option value="prometeia">Prometeia</option>
         </select>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={rows.length === 0}
+          className="ml-auto rounded border border-ink-soft/30 px-3 py-1 text-sm font-medium text-ink hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Export to Excel
+        </button>
       </div>
       <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
         <table className="w-full text-left text-sm">
