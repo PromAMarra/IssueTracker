@@ -29,19 +29,25 @@ export function Board({
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function run(issueId: string, action: () => Promise<void>) {
     setPendingId(issueId);
+    setError(null);
     try {
       await action();
       router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {
       setPendingId(null);
     }
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+    <div className="flex flex-col gap-3">
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
       {STATUSES.map((status) => (
         <div key={status} className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
@@ -113,6 +119,7 @@ export function Board({
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

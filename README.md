@@ -60,9 +60,11 @@ Open http://localhost:3000 — it redirects to `/login`.
    URL>`, `git push -u origin main`).
 2. Go to https://vercel.com, create a free account, "Add New Project", import the
    GitHub repo.
-3. In the project's **Environment Variables** settings, add the same three
-   variables from `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+3. In the project's **Environment Variables** settings, add
+   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from
+   `.env.local`. Do not add `SUPABASE_SERVICE_ROLE_KEY` here or anywhere else —
+   it isn't used by the app (it bypasses Row Level Security) and should never be
+   deployed.
 4. Deploy. Vercel gives you a URL like `https://uat-tracker-yourname.vercel.app`.
 5. Back in Supabase, go to **Authentication → URL Configuration** and set **Site
    URL** to that Vercel URL, so email confirmation links point at the deployed

@@ -17,7 +17,23 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
 
+  const title = input.title.trim();
+  const description = input.description.trim();
+  if (!title || title.length > 200) throw new Error('Title must be 1-200 characters.');
+  if (!description || description.length > 5000) {
+    throw new Error('Description must be 1-5000 characters.');
+  }
+
   const supabase = createServerClient();
+
+  const { data: engagement, error: engagementError } = await supabase
+    .from('engagements')
+    .select('modules')
+    .eq('id', input.engagementId)
+    .single();
+  if (engagementError) throw engagementError;
+  const module = input.module && engagement.modules.includes(input.module) ? input.module : null;
+
   const { data: keyData, error: keyError } = await supabase.rpc('next_issue_key', {
     p_engagement_id: input.engagementId,
   });
@@ -28,10 +44,10 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     .insert({
       engagement_id: input.engagementId,
       key: keyData as string,
-      title: input.title,
-      description: input.description,
+      title,
+      description,
       priority: input.priority,
-      module: input.module,
+      module,
       org: session.profile.is_prometeia ? 'prometeia' : 'bank',
       reporter_id: session.id,
     })
@@ -40,6 +56,7 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   if (error) throw error;
   revalidatePath(`/${input.engagementId}/board`);
   revalidatePath(`/${input.engagementId}/list`);
+  revalidatePath(`/${input.engagementId}/dashboard`);
   return data.id as string;
 }
 
@@ -73,10 +90,13 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
     .single();
   if (fetchError) throw fetchError;
 
-  const isReopen = current.status === 'closed' && newStatus === 'ongoing';
-  const patch: Record<string, unknown> = { status: newStatus };
-  if (newStatus === 'closed') patch.closed_at = new Date().toISOString();
-  if (isReopen) patch.closed_at = null;
+  const isReopen =
+    current.status === 'closed' &&
+    (newStatus === 'ongoing' || newStatus === 'backlog' || newStatus === 'ready_for_test');
+  const patch: Record<string, unknown> = {
+    status: newStatus,
+    closed_at: newStatus === 'closed' ? new Date().toISOString() : null,
+  };
 
   const { error } = await supabase.from('issues').update(patch).eq('id', issueId);
   if (error) throw error;
@@ -103,6 +123,7 @@ export async function updateIssuePriority(issueId: string, newPriority: Priority
   await recordHistory(supabase, issueId, 'priority', current.priority, newPriority, session.id);
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
+  revalidatePath(`/${current.engagement_id}/dashboard`);
 }
 
 export async function updateIssueAssignee(issueId: string, newAssignee: string | null) {
@@ -137,15 +158,20 @@ export async function updateIssueModule(issueId: string, newModule: string | nul
   await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id);
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
+  revalidatePath(`/${current.engagement_id}/dashboard`);
 }
 
 export async function addComment(issueId: string, body: string) {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
+  const trimmedBody = body.trim();
+  if (!trimmedBody || trimmedBody.length > 4000) {
+    throw new Error('Comment must be 1-4000 characters.');
+  }
   const supabase = createServerClient();
   const { error } = await supabase
     .from('issue_comments')
-    .insert({ issue_id: issueId, author_id: session.id, body });
+    .insert({ issue_id: issueId, author_id: session.id, body: trimmedBody });
   if (error) throw error;
 }
 

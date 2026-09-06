@@ -33,11 +33,19 @@ export function IssueDetailModal({
   const router = useRouter();
   const pathname = usePathname();
   const [detail, setDetail] = useState<IssueDetail | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [commentBody, setCommentBody] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function reload() {
-    setDetail(await getIssueDetail(issueId));
+    try {
+      setDetail(await getIssueDetail(issueId));
+      setLoadFailed(false);
+    } catch (err) {
+      setLoadFailed(true);
+      setError(err instanceof Error ? err.message : 'Could not load this issue.');
+    }
   }
 
   useEffect(() => {
@@ -51,10 +59,13 @@ export function IssueDetailModal({
 
   async function handleField(action: () => Promise<void>) {
     setBusy(true);
+    setError(null);
     try {
       await action();
       await reload();
       router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {
       setBusy(false);
     }
@@ -64,10 +75,13 @@ export function IssueDetailModal({
     e.preventDefault();
     if (!commentBody.trim()) return;
     setBusy(true);
+    setError(null);
     try {
       await addComment(issueId, commentBody.trim());
       setCommentBody('');
       await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not add your comment.');
     } finally {
       setBusy(false);
     }
@@ -75,14 +89,33 @@ export function IssueDetailModal({
 
   async function handleFile(file: File) {
     setBusy(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.set('file', file);
       await uploadAttachment(issueId, engagementId, formData);
       await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload this file.');
     } finally {
       setBusy(false);
     }
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
+        <div
+          className="rounded-lg bg-white p-6 text-sm text-red-600 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="mb-3">{error ?? 'Could not load this issue.'}</p>
+          <button onClick={close} className="text-sm font-medium text-ink hover:underline">
+            Close
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!detail) {
@@ -112,6 +145,8 @@ export function IssueDetailModal({
         </div>
 
         <p className="mb-4 whitespace-pre-wrap text-sm text-ink">{issue.description}</p>
+
+        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
         {isProm ? (
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

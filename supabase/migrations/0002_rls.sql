@@ -21,9 +21,18 @@ $$ language sql stable security definer set search_path = public, pg_temp;
 
 -- profiles: everyone reads all profiles (needed for assignee/author display and
 -- email lookup in member management); only the row owner updates their own.
-create policy "profiles_select_all" on public.profiles for select
+create policy "profiles_select_self_or_related" on public.profiles for select
   to authenticated
-  using (true);
+  using (
+    id = auth.uid()
+    or public.is_prometeia_user()
+    or is_prometeia
+    or exists (
+      select 1 from public.engagement_members em1
+      join public.engagement_members em2 on em1.engagement_id = em2.engagement_id
+      where em1.user_id = auth.uid() and em2.user_id = profiles.id
+    )
+  );
 create policy "profiles_update_self" on public.profiles for update
   using (id = auth.uid())
   with check (id = auth.uid());

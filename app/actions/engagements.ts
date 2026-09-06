@@ -88,7 +88,7 @@ export async function addMemberByEmail(engagementId: string, email: string): Pro
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle();
   if (profileError) throw profileError;
   if (!profile) {
