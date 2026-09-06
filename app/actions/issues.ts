@@ -247,7 +247,8 @@ export async function uploadAttachment(issueId: string, engagementId: string, fo
   if (!(file instanceof File)) throw new Error('No file provided');
 
   const supabase = createServerClient();
-  const path = `${engagementId}/${issueId}/${Date.now()}-${file.name}`;
+  const safeExt = (file.name.split('.').pop() ?? 'bin').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'bin';
+  const path = `${engagementId}/${issueId}/${Date.now()}-${crypto.randomUUID()}.${safeExt}`;
   const { error: uploadError } = await supabase.storage.from('issue-attachments').upload(path, file);
   if (uploadError) throw uploadError;
 
