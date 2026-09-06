@@ -68,66 +68,84 @@ export function NewIssueForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm">
-      <input
-        required
-        placeholder="Issue title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="rounded border border-ink-soft/30 px-3 py-2 text-sm"
-      />
-      <textarea
-        required
-        placeholder="What's wrong, and how to reproduce it"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={3}
-        className="rounded border border-ink-soft/30 px-3 py-2 text-sm"
-      />
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        Issue title
+        <input
+          required
+          placeholder="Issue title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        Description
+        <textarea
+          required
+          placeholder="What's wrong, and how to reproduce it"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+        />
+      </label>
       <div className="flex flex-wrap gap-3">
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as Priority)}
-          className="rounded border border-ink-soft/30 px-2 py-2 text-sm capitalize"
-        >
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <select
-          value={module}
-          onChange={(e) => setModule(e.target.value)}
-          className="rounded border border-ink-soft/30 px-2 py-2 text-sm"
-        >
-          <option value="">No module</option>
-          {modules.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-        <select
-          value={testCasePackage}
-          onChange={(e) => setTestCasePackage(e.target.value)}
-          className="rounded border border-ink-soft/30 px-2 py-2 text-sm"
-        >
-          <option value="">No test case package</option>
-          {testCasePackages.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Priority
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Priority)}
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm capitalize text-ink"
+          >
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Module
+          <select
+            value={module}
+            onChange={(e) => setModule(e.target.value)}
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+          >
+            <option value="">No module</option>
+            {modules.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Test case package
+          <select
+            value={testCasePackage}
+            onChange={(e) => setTestCasePackage(e.target.value)}
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+          >
+            <option value="">No test case package</option>
+            {testCasePackages.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <textarea
-        placeholder="Test case step (optional)"
-        value={testCaseStep}
-        onChange={(e) => setTestCaseStep(e.target.value)}
-        rows={2}
-        className="rounded border border-ink-soft/30 px-3 py-2 text-sm"
-      />
-      <label className="flex flex-col gap-1 text-sm text-ink-soft">
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        Test case step (optional)
+        <textarea
+          placeholder="Test case step (optional)"
+          value={testCaseStep}
+          onChange={(e) => setTestCaseStep(e.target.value)}
+          rows={2}
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
         Attachments (optional — cannot be added after the ticket is reported)
         <input
           ref={fileInputRef}
