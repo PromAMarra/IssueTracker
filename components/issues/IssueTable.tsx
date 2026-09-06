@@ -170,7 +170,7 @@ export function IssueTable({ issues, modules }: { issues: Issue[]; modules: stri
                 <td className="px-3 py-2 text-ink-soft">{issue.assignee ?? '—'}</td>
                 <td className="px-3 py-2 capitalize text-ink-soft">{issue.org}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
-                  {new Date(issue.created_at).toLocaleDateString()}
+                  {new Date(issue.created_at).toLocaleDateString('en-GB')}
                 </td>
               </tr>
             ))}

@@ -119,7 +119,7 @@ export function IssueDetailModal({
         <div className="mb-4 flex items-start justify-between">
           <div>
             <span className="font-mono text-xs text-ink-soft">
-              {issue.key} · Reported {new Date(issue.created_at).toLocaleDateString()}
+              {issue.key} · Reported {new Date(issue.created_at).toLocaleDateString('en-GB')}
             </span>
             <h2 className="text-lg font-semibold text-ink">{issue.title}</h2>
           </div>
@@ -244,7 +244,7 @@ export function IssueDetailModal({
             {comments.map((c) => (
               <li key={c.id} className="text-sm">
                 <span className="font-medium text-ink">{c.authorName}</span>{' '}
-                <span className="font-mono text-xs text-ink-soft">{new Date(c.createdAt).toLocaleString()}</span>
+                <span className="font-mono text-xs text-ink-soft">{new Date(c.createdAt).toLocaleString('en-GB')}</span>
                 <p className="text-ink">{c.body}</p>
               </li>
             ))}
@@ -272,7 +272,7 @@ export function IssueDetailModal({
           <ul className="flex flex-col gap-1">
             {history.map((h) => (
               <li key={h.id} className="text-xs text-ink-soft">
-                <span className="font-mono">{new Date(h.changedAt).toLocaleString()}</span> — {h.changedByName}{' '}
+                <span className="font-mono">{new Date(h.changedAt).toLocaleString('en-GB')}</span> — {h.changedByName}{' '}
                 changed <span className="font-medium text-ink">{h.field}</span> to{' '}
                 <span className="font-medium text-ink">{h.toValue}</span>
               </li>

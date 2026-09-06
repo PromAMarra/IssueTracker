@@ -60,7 +60,7 @@ export function Board({
                 <div key={issue.id} className="rounded-lg bg-white p-3 shadow-sm">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="font-mono text-xs text-ink-soft">
-                      {issue.key} · {new Date(issue.created_at).toLocaleDateString()}
+                      {issue.key} · {new Date(issue.created_at).toLocaleDateString('en-GB')}
                     </span>
                     <PriorityBadge priority={issue.priority} />
                   </div>
