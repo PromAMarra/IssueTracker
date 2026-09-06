@@ -4,7 +4,7 @@ const DOT_COLOR: Record<Priority, string> = {
   critical: '#B42318',
   high: '#DC5F45',
   medium: '#E8896A',
-  low: '#94A3B8',
+  low: '#F0B8A8',
 };
 
 const LABELS: Record<Priority, string> = {
