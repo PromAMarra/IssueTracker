@@ -10,15 +10,13 @@ through a status workflow, and monitor KPIs on a BI dashboard. See
 
 1. Go to https://supabase.com, create a free account, then "New project".
 2. Once it's provisioned, go to **Project Settings → API**. Copy the **Project URL**
-   and the **anon public** key.
-3. Go to **Project Settings → API → Project API keys** and copy the
-   **service_role** key too (keep this one secret — never commit it or expose it
-   to the browser).
-4. Copy `.env.local.example` to `.env.local` and fill in the three values:
+   and the **anon public** key. (You do not need the **service_role** key anywhere —
+   it bypasses Row Level Security, the app's entire access-control boundary, and
+   nothing in this codebase uses it.)
+3. Copy `.env.local.example` to `.env.local` and fill in the two values:
    ```
    NEXT_PUBLIC_SUPABASE_URL=<your project URL>
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<your anon key>
-   SUPABASE_SERVICE_ROLE_KEY=<your service role key>
    ```
 
 ### 2. Run the database migrations
