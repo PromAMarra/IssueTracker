@@ -54,28 +54,31 @@ export default function SignupPage() {
         <h1 className="mb-1 text-xl font-semibold text-ink">Create an account</h1>
         <p className="mb-6 text-sm text-ink-soft">UAT Tracker</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm text-ink">
-            Full name
+          <div className="flex flex-col gap-1 text-sm text-ink">
+            <label htmlFor="signup-name">Full name</label>
             <input
+              id="signup-name"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="rounded border border-ink-soft/30 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-ink">
-            Email
+          </div>
+          <div className="flex flex-col gap-1 text-sm text-ink">
+            <label htmlFor="signup-email">Email</label>
             <input
+              id="signup-email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="rounded border border-ink-soft/30 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm text-ink">
-            Password
+          </div>
+          <div className="flex flex-col gap-1 text-sm text-ink">
+            <label htmlFor="signup-password">Password</label>
             <input
+              id="signup-password"
               type="password"
               required
               minLength={6}
@@ -83,7 +86,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="rounded border border-ink-soft/30 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue"
             />
-          </label>
+          </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
