@@ -21,6 +21,7 @@ import { AgingReportTable } from '@/components/dashboard/AgingReportTable';
 import { ModuleVolumeChart } from '@/components/dashboard/ModuleVolumeChart';
 import { OrgVolumeChart } from '@/components/dashboard/OrgVolumeChart';
 import { ExportDashboardButton } from '@/components/dashboard/ExportDashboardButton';
+import { ExportPdfButton } from '@/components/dashboard/ExportPdfButton';
 
 export default async function DashboardPage({ params }: { params: { engagementId: string } }) {
   const session = await getSessionUser();
@@ -48,17 +49,7 @@ export default async function DashboardPage({ params }: { params: { engagementId
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatTile label="Total issues" value={String(issues.length)} />
-          <StatTile label="Open" value={String(openCount)} />
-          <StatTile label="Closed" value={String(closedCount)} />
-          <StatTile
-            label="Reopen rate"
-            value={`${reopen.ratePercent.toFixed(0)}%`}
-            sublabel={`${reopen.reopenedCount} of ${reopen.everClosedCount} closed`}
-          />
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <ExportDashboardButton
           engagementName={engagement.name}
           statusDist={statusDist}
@@ -69,18 +60,31 @@ export default async function DashboardPage({ params }: { params: { engagementId
           moduleVol={moduleVol}
           orgVol={orgVol}
         />
+        <ExportPdfButton targetId="dashboard-export-root" engagementName={engagement.name} />
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <StatusDistributionChart distribution={statusDist} />
-        <PriorityDistributionChart distribution={priorityDist} />
+      <div id="dashboard-export-root" className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <StatTile label="Total issues" value={String(issues.length)} />
+          <StatTile label="Open" value={String(openCount)} />
+          <StatTile label="Closed" value={String(closedCount)} />
+          <StatTile
+            label="Reopen rate"
+            value={`${reopen.ratePercent.toFixed(0)}%`}
+            sublabel={`${reopen.reopenedCount} of ${reopen.everClosedCount} closed`}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <StatusDistributionChart distribution={statusDist} />
+          <PriorityDistributionChart distribution={priorityDist} />
+        </div>
+        <TimeToCloseChart rows={timeToClose} />
+        <ThroughputChart buckets={throughput} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ModuleVolumeChart data={moduleVol} />
+          <OrgVolumeChart data={orgVol} />
+        </div>
+        <AgingReportTable rows={aging} />
       </div>
-      <TimeToCloseChart rows={timeToClose} />
-      <ThroughputChart buckets={throughput} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ModuleVolumeChart data={moduleVol} />
-        <OrgVolumeChart data={orgVol} />
-      </div>
-      <AgingReportTable rows={aging} />
     </div>
   );
 }
