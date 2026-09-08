@@ -11,11 +11,13 @@ export function NewIssueForm({
   engagementId,
   modules,
   testCasePackages,
+  teamMembers,
   onCreated,
 }: {
   engagementId: string;
   modules: string[];
   testCasePackages: string[];
+  teamMembers: string[];
   onCreated?: () => void;
 }) {
   const router = useRouter();
@@ -25,6 +27,7 @@ export function NewIssueForm({
   const [module, setModule] = useState(modules[0] ?? '');
   const [testCasePackage, setTestCasePackage] = useState(testCasePackages[0] ?? '');
   const [testCaseStep, setTestCaseStep] = useState('');
+  const [assignee, setAssignee] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +46,7 @@ export function NewIssueForm({
         module: module || null,
         testCasePackage: testCasePackage || null,
         testCaseStep,
+        assignee: assignee || null,
       });
 
       for (const file of files) {
@@ -130,6 +134,21 @@ export function NewIssueForm({
             {testCasePackages.map((p) => (
               <option key={p} value={p}>
                 {p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Assign to (Prometeia)
+          <select
+            value={assignee}
+            onChange={(e) => setAssignee(e.target.value)}
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+          >
+            <option value="">Unassigned</option>
+            {teamMembers.map((m) => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </select>

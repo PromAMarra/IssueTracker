@@ -1,15 +1,22 @@
 import { createServerClient } from '@/lib/supabase/server';
 import type { Issue, IssueHistoryEntry } from '@/lib/types';
 
-export async function listIssues(engagementId: string): Promise<Issue[]> {
+export type IssueWithReporter = Issue & { reporterName: string };
+
+export async function listIssues(engagementId: string): Promise<IssueWithReporter[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('issues')
-    .select('*')
+    .select('*, profiles(full_name, email)')
     .eq('engagement_id', engagementId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data as Issue[];
+  return (data as unknown as (Issue & { profiles: { full_name: string | null; email: string } })[]).map(
+    ({ profiles, ...issue }) => ({
+      ...issue,
+      reporterName: profiles.full_name ?? profiles.email,
+    }),
+  );
 }
 
 export async function getIssue(issueId: string): Promise<Issue | null> {

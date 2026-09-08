@@ -108,7 +108,7 @@ export function IssueDetailModal({
     );
   }
 
-  const { issue, comments, history, attachments } = detail;
+  const { issue, reporterName, comments, history, attachments } = detail;
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
@@ -119,7 +119,7 @@ export function IssueDetailModal({
         <div className="mb-4 flex items-start justify-between">
           <div>
             <span className="font-mono text-xs text-ink-soft">
-              {issue.key} · Reported {new Date(issue.created_at).toLocaleDateString('en-GB')}
+              {issue.key} · Reported by {reporterName} on {new Date(issue.created_at).toLocaleDateString('en-GB')}
             </span>
             <h2 className="text-lg font-semibold text-ink">{issue.title}</h2>
           </div>
@@ -211,6 +211,9 @@ export function IssueDetailModal({
                     {m}
                   </option>
                 ))}
+                {!teamMembers.includes(reporterName) && (
+                  <option value={reporterName}>↩ Back to {reporterName} (reporter)</option>
+                )}
               </select>
             </label>
           </div>

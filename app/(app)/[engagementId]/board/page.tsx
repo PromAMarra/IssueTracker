@@ -28,6 +28,7 @@ export default async function BoardPage({
         engagementId={engagement.id}
         modules={engagement.modules}
         testCasePackages={engagement.test_case_packages}
+        teamMembers={engagement.team_members}
       />
       <Board issues={issues} teamMembers={engagement.team_members} isProm={session.profile.is_prometeia} />
       {searchParams.issue && (

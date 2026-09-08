@@ -4,10 +4,20 @@ import { useMemo, useState } from 'react';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
-import type { Issue, Org, Priority, Status } from '@/lib/types';
+import type { Org, Priority, Status } from '@/lib/types';
+import type { IssueWithReporter } from '@/lib/data/issues';
 import { downloadWorkbook } from '@/lib/exportXlsx';
 
-type SortKey = 'key' | 'title' | 'status' | 'priority' | 'module' | 'assignee' | 'org' | 'created_at';
+type SortKey =
+  | 'key'
+  | 'title'
+  | 'status'
+  | 'priority'
+  | 'module'
+  | 'assignee'
+  | 'reporterName'
+  | 'org'
+  | 'created_at';
 
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
@@ -24,11 +34,12 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'priority', label: 'Priority' },
   { key: 'module', label: 'Module' },
   { key: 'assignee', label: 'Assignee' },
+  { key: 'reporterName', label: 'Reporter' },
   { key: 'org', label: 'Raised by' },
   { key: 'created_at', label: 'Opened' },
 ];
 
-export function IssueTable({ issues, modules }: { issues: Issue[]; modules: string[] }) {
+export function IssueTable({ issues, modules }: { issues: IssueWithReporter[]; modules: string[] }) {
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [moduleFilter, setModuleFilter] = useState('');
@@ -68,6 +79,7 @@ export function IssueTable({ issues, modules }: { issues: Issue[]; modules: stri
             Priority: issue.priority,
             Module: issue.module ?? 'Unassigned',
             Assignee: issue.assignee ?? '',
+            Reporter: issue.reporterName,
             'Raised by': issue.org,
             Opened: new Date(issue.created_at).toLocaleDateString(),
           })),
@@ -168,6 +180,7 @@ export function IssueTable({ issues, modules }: { issues: Issue[]; modules: stri
                 </td>
                 <td className="px-3 py-2 text-ink-soft">{issue.module ?? 'Unassigned'}</td>
                 <td className="px-3 py-2 text-ink-soft">{issue.assignee ?? '—'}</td>
+                <td className="px-3 py-2 text-ink-soft">{issue.reporterName}</td>
                 <td className="px-3 py-2 capitalize text-ink-soft">{issue.org}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
                   {new Date(issue.created_at).toLocaleDateString('en-GB')}

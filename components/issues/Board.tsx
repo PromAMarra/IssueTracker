@@ -6,7 +6,8 @@ import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { updateIssueAssignee, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
 import { STATUSES } from '@/lib/types';
-import type { Issue, Priority, Status } from '@/lib/types';
+import type { Priority, Status } from '@/lib/types';
+import type { IssueWithReporter } from '@/lib/data/issues';
 
 const COLUMN_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
@@ -23,7 +24,7 @@ export function Board({
   teamMembers,
   isProm,
 }: {
-  issues: Issue[];
+  issues: IssueWithReporter[];
   teamMembers: string[];
   isProm: boolean;
 }) {
@@ -64,10 +65,13 @@ export function Board({
                     </span>
                     <PriorityBadge priority={issue.priority} />
                   </div>
-                  <a href={`?issue=${issue.id}`} className="mb-2 block text-sm font-medium text-ink hover:underline">
+                  <a href={`?issue=${issue.id}`} className="mb-1 block text-sm font-medium text-ink hover:underline">
                     {issue.title}
                   </a>
-                  {issue.module && <p className="mb-2 text-xs text-ink-soft">{issue.module}</p>}
+                  <p className="mb-2 text-xs text-ink-soft">
+                    Reported by {issue.reporterName}
+                    {issue.module ? ` · ${issue.module}` : ''}
+                  </p>
                   {isProm ? (
                     <div className="flex flex-col gap-2">
                       <select
@@ -108,6 +112,9 @@ export function Board({
                             {m}
                           </option>
                         ))}
+                        {!teamMembers.includes(issue.reporterName) && (
+                          <option value={issue.reporterName}>↩ Back to {issue.reporterName} (reporter)</option>
+                        )}
                       </select>
                     </div>
                   ) : (
