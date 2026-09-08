@@ -189,24 +189,36 @@ export async function addComment(issueId: string, body: string) {
   if (error) throw error;
 }
 
-export type CommentRow = { id: string; body: string; createdAt: string; authorName: string };
+export type CommentRow = {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorName: string;
+  authorIsProm: boolean;
+};
 
 export async function listComments(issueId: string): Promise<CommentRow[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('issue_comments')
-    .select('id, body, created_at, profiles(full_name, email)')
+    .select('id, body, created_at, profiles(full_name, email, is_prometeia)')
     .eq('issue_id', issueId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data as unknown as { id: string; body: string; created_at: string; profiles: { full_name: string | null; email: string } }[]).map(
-    (row) => ({
-      id: row.id,
-      body: row.body,
-      createdAt: row.created_at,
-      authorName: row.profiles.full_name ?? row.profiles.email,
-    }),
-  );
+  return (
+    data as unknown as {
+      id: string;
+      body: string;
+      created_at: string;
+      profiles: { full_name: string | null; email: string; is_prometeia: boolean };
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    body: row.body,
+    createdAt: row.created_at,
+    authorName: row.profiles.full_name ?? row.profiles.email,
+    authorIsProm: row.profiles.is_prometeia,
+  }));
 }
 
 export type HistoryRow = {

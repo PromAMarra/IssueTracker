@@ -243,10 +243,22 @@ export function IssueDetailModal({
 
         <section className="mb-6">
           <h3 className="mb-2 text-sm font-semibold text-ink">Comments</h3>
-          <ul className="mb-3 flex flex-col gap-3">
+          <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (
-              <li key={c.id} className="text-sm">
+              <li
+                key={c.id}
+                className={`rounded-md border-l-4 p-2 text-sm ${
+                  c.authorIsProm ? 'border-brand-green bg-brand-green/5' : 'border-brand-blue bg-brand-blue/5'
+                }`}
+              >
                 <span className="font-medium text-ink">{c.authorName}</span>{' '}
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    c.authorIsProm ? 'bg-brand-green/15 text-brand-green' : 'bg-brand-blue/15 text-brand-blue'
+                  }`}
+                >
+                  {c.authorIsProm ? 'Prometeia' : 'Bank'}
+                </span>{' '}
                 <span className="font-mono text-xs text-ink-soft">{new Date(c.createdAt).toLocaleString('en-GB')}</span>
                 <p className="text-ink">{c.body}</p>
               </li>
