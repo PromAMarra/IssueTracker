@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   addComment,
@@ -9,6 +9,7 @@ import {
   updateIssueModule,
   updateIssuePriority,
   updateIssueStatus,
+  uploadAttachment,
   type IssueDetail,
 } from '@/app/actions/issues';
 import { StatusBadge } from './StatusBadge';
@@ -16,13 +17,22 @@ import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
 
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+
+function isImageFile(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+  return IMAGE_EXTENSIONS.includes(ext);
+}
+
 export function IssueDetailModal({
   issueId,
+  engagementId,
   isProm,
   modules,
   teamMembers,
 }: {
   issueId: string;
+  engagementId: string;
   isProm: boolean;
   modules: string[];
   teamMembers: string[];
@@ -32,6 +42,8 @@ export function IssueDetailModal({
   const [detail, setDetail] = useState<IssueDetail | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [commentBody, setCommentBody] = useState('');
+  const [commentFiles, setCommentFiles] = useState<File[]>([]);
+  const commentFileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,8 +86,18 @@ export function IssueDetailModal({
     setBusy(true);
     setError(null);
     try {
-      await addComment(issueId, commentBody.trim());
+      const newCommentId = await addComment(issueId, commentBody.trim());
+
+      for (const file of commentFiles) {
+        const formData = new FormData();
+        formData.set('file', file);
+        // eslint-disable-next-line no-await-in-loop
+        await uploadAttachment(issueId, engagementId, formData, newCommentId);
+      }
+
       setCommentBody('');
+      setCommentFiles([]);
+      if (commentFileInputRef.current) commentFileInputRef.current.value = '';
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add your comment.');
@@ -261,24 +283,61 @@ export function IssueDetailModal({
                 </span>{' '}
                 <span className="font-mono text-xs text-ink-soft">{new Date(c.createdAt).toLocaleString('en-GB')}</span>
                 <p className="text-ink">{c.body}</p>
+                {c.attachments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.attachments.map((a) =>
+                      isImageFile(a.fileName) ? (
+                        <a key={a.id} href={a.url} target="_blank" rel="noreferrer">
+                          <img
+                            src={a.url}
+                            alt={a.fileName}
+                            className="max-h-40 rounded border border-ink-soft/20 object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          key={a.id}
+                          href={a.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-brand-blue hover:underline"
+                        >
+                          {a.fileName}
+                        </a>
+                      ),
+                    )}
+                  </div>
+                )}
               </li>
             ))}
             {comments.length === 0 && <li className="text-sm text-ink-soft">No comments yet.</li>}
           </ul>
-          <form onSubmit={handleComment} className="flex gap-2">
-            <input
-              value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              placeholder="Add a comment"
-              className="flex-1 rounded border border-ink-soft/30 px-3 py-2 text-sm"
-            />
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded bg-brand-navy px-3 py-2 text-sm font-medium text-white hover:bg-brand-navy-2 disabled:opacity-60"
-            >
-              Send
-            </button>
+          <form onSubmit={handleComment} className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                value={commentBody}
+                onChange={(e) => setCommentBody(e.target.value)}
+                placeholder="Add a comment"
+                className="flex-1 rounded border border-ink-soft/30 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="rounded bg-brand-navy px-3 py-2 text-sm font-medium text-white hover:bg-brand-navy-2 disabled:opacity-60"
+              >
+                Send
+              </button>
+            </div>
+            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+              Attach files or screenshots (optional)
+              <input
+                ref={commentFileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => setCommentFiles(e.target.files ? Array.from(e.target.files) : [])}
+                className="text-sm"
+              />
+            </label>
           </form>
         </section>
 

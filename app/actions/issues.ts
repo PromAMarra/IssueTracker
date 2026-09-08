@@ -175,7 +175,7 @@ export async function updateIssueModule(issueId: string, newModule: string | nul
   revalidatePath(`/${current.engagement_id}/dashboard`);
 }
 
-export async function addComment(issueId: string, body: string) {
+export async function addComment(issueId: string, body: string): Promise<string> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   const trimmedBody = body.trim();
@@ -183,10 +183,13 @@ export async function addComment(issueId: string, body: string) {
     throw new Error('Comment must be 1-4000 characters.');
   }
   const supabase = createServerClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('issue_comments')
-    .insert({ issue_id: issueId, author_id: session.id, body: trimmedBody });
+    .insert({ issue_id: issueId, author_id: session.id, body: trimmedBody })
+    .select('id')
+    .single();
   if (error) throw error;
+  return data.id as string;
 }
 
 export type CommentRow = {
@@ -195,6 +198,7 @@ export type CommentRow = {
   createdAt: string;
   authorName: string;
   authorIsProm: boolean;
+  attachments: AttachmentRow[];
 };
 
 export async function listComments(issueId: string): Promise<CommentRow[]> {
@@ -218,6 +222,7 @@ export async function listComments(issueId: string): Promise<CommentRow[]> {
     createdAt: row.created_at,
     authorName: row.profiles.full_name ?? row.profiles.email,
     authorIsProm: row.profiles.is_prometeia,
+    attachments: [],
   }));
 }
 
@@ -257,13 +262,20 @@ export async function listHistory(issueId: string): Promise<HistoryRow[]> {
   }));
 }
 
-export type AttachmentRow = { id: string; fileName: string; url: string; uploadedByName: string; uploadedAt: string };
+export type AttachmentRow = {
+  id: string;
+  fileName: string;
+  url: string;
+  uploadedByName: string;
+  uploadedAt: string;
+  commentId: string | null;
+};
 
 export async function listAttachments(issueId: string): Promise<AttachmentRow[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('issue_attachments')
-    .select('id, storage_path, file_name, uploaded_at, profiles(full_name, email)')
+    .select('id, storage_path, file_name, uploaded_at, comment_id, profiles(full_name, email)')
     .eq('issue_id', issueId)
     .order('uploaded_at', { ascending: true });
   if (error) throw error;
@@ -273,6 +285,7 @@ export async function listAttachments(issueId: string): Promise<AttachmentRow[]>
     storage_path: string;
     file_name: string;
     uploaded_at: string;
+    comment_id: string | null;
     profiles: { full_name: string | null; email: string };
   }[];
 
@@ -287,12 +300,18 @@ export async function listAttachments(issueId: string): Promise<AttachmentRow[]>
         url: signed?.signedUrl ?? '',
         uploadedByName: row.profiles.full_name ?? row.profiles.email,
         uploadedAt: row.uploaded_at,
+        commentId: row.comment_id,
       };
     }),
   );
 }
 
-export async function uploadAttachment(issueId: string, engagementId: string, formData: FormData) {
+export async function uploadAttachment(
+  issueId: string,
+  engagementId: string,
+  formData: FormData,
+  commentId?: string,
+) {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   const file = formData.get('file');
@@ -304,9 +323,13 @@ export async function uploadAttachment(issueId: string, engagementId: string, fo
   const { error: uploadError } = await supabase.storage.from('issue-attachments').upload(path, file);
   if (uploadError) throw uploadError;
 
-  const { error } = await supabase
-    .from('issue_attachments')
-    .insert({ issue_id: issueId, storage_path: path, file_name: file.name, uploaded_by: session.id });
+  const { error } = await supabase.from('issue_attachments').insert({
+    issue_id: issueId,
+    storage_path: path,
+    file_name: file.name,
+    uploaded_by: session.id,
+    comment_id: commentId ?? null,
+  });
   if (error) throw error;
 }
 
@@ -329,10 +352,15 @@ export async function getIssueDetail(issueId: string): Promise<IssueDetail> {
   const { profiles, ...issue } = data as unknown as Issue & {
     profiles: { full_name: string | null; email: string };
   };
-  const [comments, history, attachments] = await Promise.all([
+  const [rawComments, history, allAttachments] = await Promise.all([
     listComments(issueId),
     listHistory(issueId),
     listAttachments(issueId),
   ]);
+  const comments = rawComments.map((comment) => ({
+    ...comment,
+    attachments: allAttachments.filter((a) => a.commentId === comment.id),
+  }));
+  const attachments = allAttachments.filter((a) => a.commentId === null);
   return { issue: issue as Issue, reporterName: profiles.full_name ?? profiles.email, comments, history, attachments };
 }

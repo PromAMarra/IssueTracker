@@ -27,6 +27,7 @@ export default async function ListPage({
       {searchParams.issue && (
         <IssueDetailModal
           issueId={searchParams.issue}
+          engagementId={engagement.id}
           isProm={session.profile.is_prometeia}
           modules={engagement.modules}
           teamMembers={engagement.team_members}
