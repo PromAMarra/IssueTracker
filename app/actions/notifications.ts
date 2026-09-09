@@ -3,9 +3,11 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
 
+export type NotificationType = 'issue_assigned' | 'comment_added' | 'status_changed';
+
 export type NotificationRow = {
   id: string;
-  type: 'issue_assigned' | 'comment_added';
+  type: NotificationType;
   message: string;
   createdAt: string;
   readAt: string | null;
@@ -28,7 +30,7 @@ export async function listNotifications(limit = 30): Promise<NotificationRow[]> 
   return (
     data as unknown as {
       id: string;
-      type: 'issue_assigned' | 'comment_added';
+      type: NotificationType;
       message: string;
       created_at: string;
       read_at: string | null;
