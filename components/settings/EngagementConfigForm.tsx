@@ -9,7 +9,6 @@ export type EngagementConfigValues = {
   keyPrefix: string;
   modules: string[];
   testCasePackages: string[];
-  teamMembers: string[];
   slaDays: SlaDays;
 };
 
@@ -36,7 +35,6 @@ export function EngagementConfigForm({
   const [keyPrefix, setKeyPrefix] = useState(initial.keyPrefix);
   const [modules, setModules] = useState(initial.modules.join(', '));
   const [testCasePackages, setTestCasePackages] = useState(initial.testCasePackages.join(', '));
-  const [teamMembers, setTeamMembers] = useState(initial.teamMembers.join(', '));
   const [sla, setSla] = useState(initial.slaDays);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +50,6 @@ export function EngagementConfigForm({
         keyPrefix,
         modules: splitList(modules),
         testCasePackages: splitList(testCasePackages),
-        teamMembers: splitList(teamMembers),
         slaDays: sla,
       });
     } catch (err) {
@@ -109,15 +106,6 @@ export function EngagementConfigForm({
           value={testCasePackages}
           onChange={(e) => setTestCasePackages(e.target.value)}
           placeholder="Onboarding Suite, Payments Suite, Regression Pack"
-          className="rounded border border-ink-soft/30 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm text-ink">
-        Prometeia team members / assignees (comma-separated)
-        <input
-          value={teamMembers}
-          onChange={(e) => setTeamMembers(e.target.value)}
-          placeholder="Ana Rossi, Marco Bianchi"
           className="rounded border border-ink-soft/30 px-3 py-2"
         />
       </label>

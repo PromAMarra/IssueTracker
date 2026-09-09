@@ -1,6 +1,7 @@
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { EngagementPicker } from '@/components/EngagementPicker';
 import { NavTabs } from '@/components/NavTabs';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import type { Engagement, EngagementSummary } from '@/lib/data/engagements';
 import type { Profile } from '@/lib/auth/session';
 
@@ -43,6 +44,7 @@ export function Header({
             currentId={current.id}
             canCreate={profile.is_prometeia}
           />
+          <NotificationBell />
           <span className="text-sm text-ink-soft">{profile.full_name ?? profile.email}</span>
           <LogoutButton />
         </div>

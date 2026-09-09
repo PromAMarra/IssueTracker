@@ -12,7 +12,6 @@ export type EngagementInput = {
   keyPrefix: string;
   modules: string[];
   testCasePackages: string[];
-  teamMembers: string[];
   slaDays: SlaDays;
 };
 
@@ -33,7 +32,6 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
       key_prefix: input.keyPrefix.trim() ? sanitizeKeyPrefix(input.keyPrefix) : keyPrefixFromBankName(input.bankName),
       modules: input.modules,
       test_case_packages: input.testCasePackages,
-      team_members: input.teamMembers,
       sla_days: input.slaDays,
       created_by: session.id,
     })
@@ -55,7 +53,6 @@ export async function updateEngagementSettings(engagementId: string, input: Enga
       key_prefix: sanitizeKeyPrefix(input.keyPrefix),
       modules: input.modules,
       test_case_packages: input.testCasePackages,
-      team_members: input.teamMembers,
       sla_days: input.slaDays,
     })
     .eq('id', engagementId);
@@ -85,19 +82,34 @@ export async function uploadBankLogo(engagementId: string, formData: FormData) {
   revalidatePath(`/${engagementId}/settings`);
 }
 
+export type MemberRole = 'bank' | 'prometeia';
+
 export type AddMemberResult = { ok: boolean; message: string };
 
-export async function addMemberByEmail(engagementId: string, email: string): Promise<AddMemberResult> {
+export async function addMemberByEmail(
+  engagementId: string,
+  email: string,
+  role: MemberRole,
+): Promise<AddMemberResult> {
   await requireProm();
   const supabase = createServerClient();
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, is_prometeia')
     .ilike('email', email)
     .maybeSingle();
   if (profileError) throw profileError;
   if (!profile) {
     return { ok: false, message: `No account found for ${email} yet — ask them to sign up first.` };
+  }
+  if (profile.is_prometeia !== (role === 'prometeia')) {
+    return {
+      ok: false,
+      message:
+        role === 'prometeia'
+          ? `${email} is registered as a bank account, not a Prometeia account.`
+          : `${email} is registered as a Prometeia account, not a bank account.`,
+    };
   }
 
   const { error } = await supabase
@@ -108,20 +120,22 @@ export async function addMemberByEmail(engagementId: string, email: string): Pro
     throw error;
   }
   revalidatePath(`/${engagementId}/settings`);
+  revalidatePath(`/${engagementId}/board`);
   return { ok: true, message: `${email} added.` };
 }
 
 export type Member = { userId: string; email: string; fullName: string | null };
 
-export async function listMembers(engagementId: string): Promise<Member[]> {
+export async function listMembers(engagementId: string, role: MemberRole): Promise<Member[]> {
   await requireProm();
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagement_members')
-    .select('user_id, profiles(email, full_name)')
-    .eq('engagement_id', engagementId);
+    .select('user_id, profiles!inner(email, full_name, is_prometeia)')
+    .eq('engagement_id', engagementId)
+    .eq('profiles.is_prometeia', role === 'prometeia');
   if (error) throw error;
-  return (data as unknown as { user_id: string; profiles: { email: string; full_name: string | null } }[]).map(
-    (row) => ({ userId: row.user_id, email: row.profiles.email, fullName: row.profiles.full_name }),
-  );
+  return (
+    data as unknown as { user_id: string; profiles: { email: string; full_name: string | null } }[]
+  ).map((row) => ({ userId: row.user_id, email: row.profiles.email, fullName: row.profiles.full_name }));
 }

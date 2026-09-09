@@ -15,7 +15,7 @@ export type Issue = {
   test_case_step: string | null;
   org: Org;
   reporter_id: string;
-  assignee: string | null;
+  assignee_id: string | null;
   created_at: string;
   closed_at: string | null;
 };

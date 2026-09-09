@@ -16,6 +16,7 @@ import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
+import type { TeamMember } from '@/lib/data/engagements';
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
@@ -35,7 +36,7 @@ export function IssueDetailModal({
   engagementId: string;
   isProm: boolean;
   modules: string[];
-  teamMembers: string[];
+  teamMembers: TeamMember[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -130,7 +131,7 @@ export function IssueDetailModal({
     );
   }
 
-  const { issue, reporterName, comments, history, attachments } = detail;
+  const { issue, reporterName, assigneeName, comments, history, attachments } = detail;
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
@@ -222,19 +223,19 @@ export function IssueDetailModal({
             <label className="flex flex-col gap-1 text-xs text-ink-soft">
               Assignee
               <select
-                value={issue.assignee ?? ''}
+                value={issue.assignee_id ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueAssignee(issueId, e.target.value || null))}
                 className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
               >
                 <option value="">Unassigned</option>
                 {teamMembers.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
+                  <option key={m.id} value={m.id}>
+                    {m.name}
                   </option>
                 ))}
-                {!teamMembers.includes(reporterName) && (
-                  <option value={reporterName}>↩ Back to {reporterName} (reporter)</option>
+                {!teamMembers.some((m) => m.id === issue.reporter_id) && (
+                  <option value={issue.reporter_id}>↩ Back to {reporterName} (reporter)</option>
                 )}
               </select>
             </label>
@@ -244,7 +245,7 @@ export function IssueDetailModal({
             <StatusBadge status={issue.status} />
             <PriorityBadge priority={issue.priority} />
             {issue.module && <span className="text-xs text-ink-soft">{issue.module}</span>}
-            {issue.assignee && <span className="text-xs text-ink-soft">Assigned: {issue.assignee}</span>}
+            {assigneeName && <span className="text-xs text-ink-soft">Assigned: {assigneeName}</span>}
           </div>
         )}
 

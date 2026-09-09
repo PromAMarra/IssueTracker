@@ -27,7 +27,7 @@ function issue(overrides: Partial<Issue>): Issue {
     test_case_step: null,
     org: 'bank',
     reporter_id: 'u1',
-    assignee: null,
+    assignee_id: null,
     created_at: '2026-01-01T00:00:00.000Z',
     closed_at: null,
     ...overrides,

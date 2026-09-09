@@ -5,7 +5,7 @@ import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Org, Priority, Status } from '@/lib/types';
-import type { IssueWithReporter } from '@/lib/data/issues';
+import type { IssueWithNames } from '@/lib/data/issues';
 import { downloadWorkbook } from '@/lib/exportXlsx';
 
 type SortKey =
@@ -14,7 +14,7 @@ type SortKey =
   | 'status'
   | 'priority'
   | 'module'
-  | 'assignee'
+  | 'assigneeName'
   | 'reporterName'
   | 'org'
   | 'created_at';
@@ -33,13 +33,13 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'status', label: 'Status' },
   { key: 'priority', label: 'Priority' },
   { key: 'module', label: 'Module' },
-  { key: 'assignee', label: 'Assignee' },
+  { key: 'assigneeName', label: 'Assignee' },
   { key: 'reporterName', label: 'Reporter' },
   { key: 'org', label: 'Raised by' },
   { key: 'created_at', label: 'Opened' },
 ];
 
-export function IssueTable({ issues, modules }: { issues: IssueWithReporter[]; modules: string[] }) {
+export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modules: string[] }) {
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [moduleFilter, setModuleFilter] = useState('');
@@ -78,7 +78,7 @@ export function IssueTable({ issues, modules }: { issues: IssueWithReporter[]; m
             Status: STATUS_LABELS[issue.status],
             Priority: issue.priority,
             Module: issue.module ?? 'Unassigned',
-            Assignee: issue.assignee ?? '',
+            Assignee: issue.assigneeName ?? '',
             Reporter: issue.reporterName,
             'Raised by': issue.org,
             Opened: new Date(issue.created_at).toLocaleDateString(),
@@ -179,7 +179,7 @@ export function IssueTable({ issues, modules }: { issues: IssueWithReporter[]; m
                   <PriorityBadge priority={issue.priority} />
                 </td>
                 <td className="px-3 py-2 text-ink-soft">{issue.module ?? 'Unassigned'}</td>
-                <td className="px-3 py-2 text-ink-soft">{issue.assignee ?? '—'}</td>
+                <td className="px-3 py-2 text-ink-soft">{issue.assigneeName ?? '—'}</td>
                 <td className="px-3 py-2 text-ink-soft">{issue.reporterName}</td>
                 <td className="px-3 py-2 capitalize text-ink-soft">{issue.org}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">

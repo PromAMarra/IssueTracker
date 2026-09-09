@@ -7,7 +7,8 @@ import { PriorityBadge } from './PriorityBadge';
 import { updateIssueAssignee, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
 import { STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
-import type { IssueWithReporter } from '@/lib/data/issues';
+import type { IssueWithNames } from '@/lib/data/issues';
+import type { TeamMember } from '@/lib/data/engagements';
 
 const COLUMN_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
@@ -24,8 +25,8 @@ export function Board({
   teamMembers,
   isProm,
 }: {
-  issues: IssueWithReporter[];
-  teamMembers: string[];
+  issues: IssueWithNames[];
+  teamMembers: TeamMember[];
   isProm: boolean;
 }) {
   const router = useRouter();
@@ -101,26 +102,26 @@ export function Board({
                         ))}
                       </select>
                       <select
-                        value={issue.assignee ?? ''}
+                        value={issue.assignee_id ?? ''}
                         disabled={pendingId === issue.id}
                         onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
                         className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
                       >
                         <option value="">Unassigned</option>
                         {teamMembers.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
+                          <option key={m.id} value={m.id}>
+                            {m.name}
                           </option>
                         ))}
-                        {!teamMembers.includes(issue.reporterName) && (
-                          <option value={issue.reporterName}>↩ Back to {issue.reporterName} (reporter)</option>
+                        {!teamMembers.some((m) => m.id === issue.reporter_id) && (
+                          <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
                         )}
                       </select>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
                       <StatusBadge status={issue.status} />
-                      {issue.assignee && <span className="text-xs text-ink-soft">{issue.assignee}</span>}
+                      {issue.assigneeName && <span className="text-xs text-ink-soft">{issue.assigneeName}</span>}
                     </div>
                   )}
                 </div>

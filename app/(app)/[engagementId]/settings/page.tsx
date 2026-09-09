@@ -13,9 +13,10 @@ export default async function SettingsPage({ params }: { params: { engagementId:
   if (!session) redirect('/login');
   if (!session.profile.is_prometeia) redirect(`/${params.engagementId}/board`);
 
-  const [engagement, members, platformSettings] = await Promise.all([
+  const [engagement, bankMembers, prometeiaMembers, platformSettings] = await Promise.all([
     getEngagement(params.engagementId),
-    listMembers(params.engagementId),
+    listMembers(params.engagementId, 'bank'),
+    listMembers(params.engagementId, 'prometeia'),
     getPlatformSettings(),
   ]);
   if (!engagement) redirect('/');
@@ -32,7 +33,6 @@ export default async function SettingsPage({ params }: { params: { engagementId:
             keyPrefix: engagement.key_prefix,
             modules: engagement.modules,
             testCasePackages: engagement.test_case_packages,
-            teamMembers: engagement.team_members,
             slaDays: engagement.sla_days,
           }}
         />
@@ -46,7 +46,10 @@ export default async function SettingsPage({ params }: { params: { engagementId:
         <PrometeiaLogoUploader currentUrl={platformSettings.prometeiaLogoUrl} />
       </section>
       <section>
-        <MemberManager engagementId={params.engagementId} initialMembers={members} />
+        <MemberManager engagementId={params.engagementId} role="prometeia" initialMembers={prometeiaMembers} />
+      </section>
+      <section>
+        <MemberManager engagementId={params.engagementId} role="bank" initialMembers={bankMembers} />
       </section>
     </div>
   );

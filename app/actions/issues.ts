@@ -13,7 +13,7 @@ export type CreateIssueInput = {
   module: string | null;
   testCasePackage: string | null;
   testCaseStep: string;
-  assignee: string | null;
+  assigneeId: string | null;
 };
 
 export async function createIssue(input: CreateIssueInput): Promise<string> {
@@ -33,7 +33,7 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
 
   const { data: engagement, error: engagementError } = await supabase
     .from('engagements')
-    .select('modules, test_case_packages, team_members')
+    .select('modules, test_case_packages')
     .eq('id', input.engagementId)
     .single();
   if (engagementError) throw engagementError;
@@ -42,8 +42,19 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     input.testCasePackage && engagement.test_case_packages.includes(input.testCasePackage)
       ? input.testCasePackage
       : null;
-  const assignee =
-    input.assignee && engagement.team_members.includes(input.assignee) ? input.assignee : null;
+
+  let assigneeId: string | null = null;
+  if (input.assigneeId) {
+    const { data: assigneeMember, error: assigneeError } = await supabase
+      .from('engagement_members')
+      .select('user_id, profiles!inner(is_prometeia)')
+      .eq('engagement_id', input.engagementId)
+      .eq('user_id', input.assigneeId)
+      .eq('profiles.is_prometeia', true)
+      .maybeSingle();
+    if (assigneeError) throw assigneeError;
+    assigneeId = assigneeMember ? assigneeMember.user_id : null;
+  }
 
   const { data: keyData, error: keyError } = await supabase.rpc('next_issue_key', {
     p_engagement_id: input.engagementId,
@@ -63,7 +74,7 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
       test_case_step: testCaseStep || null,
       org: session.profile.is_prometeia ? 'prometeia' : 'bank',
       reporter_id: session.id,
-      assignee,
+      assignee_id: assigneeId,
     })
     .select('id')
     .single();
@@ -140,19 +151,38 @@ export async function updateIssuePriority(issueId: string, newPriority: Priority
   revalidatePath(`/${current.engagement_id}/dashboard`);
 }
 
-export async function updateIssueAssignee(issueId: string, newAssignee: string | null) {
+async function profileName(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string | null,
+): Promise<string> {
+  if (!userId) return 'Unassigned';
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? data.full_name ?? data.email : 'Unassigned';
+}
+
+export async function updateIssueAssignee(issueId: string, newAssigneeId: string | null) {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
     .from('issues')
-    .select('assignee, engagement_id')
+    .select('assignee_id, engagement_id')
     .eq('id', issueId)
     .single();
   if (fetchError) throw fetchError;
 
-  const { error } = await supabase.from('issues').update({ assignee: newAssignee }).eq('id', issueId);
+  const { error } = await supabase.from('issues').update({ assignee_id: newAssigneeId }).eq('id', issueId);
   if (error) throw error;
-  await recordHistory(supabase, issueId, 'assignee', current.assignee, newAssignee ?? 'Unassigned', session.id);
+
+  const [fromName, toName] = await Promise.all([
+    profileName(supabase, current.assignee_id),
+    profileName(supabase, newAssigneeId),
+  ]);
+  await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id);
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
 }
@@ -336,6 +366,7 @@ export async function uploadAttachment(
 export type IssueDetail = {
   issue: Issue;
   reporterName: string;
+  assigneeName: string | null;
   comments: CommentRow[];
   history: HistoryRow[];
   attachments: AttachmentRow[];
@@ -345,12 +376,15 @@ export async function getIssueDetail(issueId: string): Promise<IssueDetail> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('issues')
-    .select('*, profiles(full_name, email)')
+    .select(
+      '*, reporter:profiles!reporter_id(full_name, email), assignee:profiles!assignee_id(full_name, email)',
+    )
     .eq('id', issueId)
     .single();
   if (error) throw error;
-  const { profiles, ...issue } = data as unknown as Issue & {
-    profiles: { full_name: string | null; email: string };
+  const { reporter, assignee, ...issue } = data as unknown as Issue & {
+    reporter: { full_name: string | null; email: string };
+    assignee: { full_name: string | null; email: string } | null;
   };
   const [rawComments, history, allAttachments] = await Promise.all([
     listComments(issueId),
@@ -362,5 +396,12 @@ export async function getIssueDetail(issueId: string): Promise<IssueDetail> {
     attachments: allAttachments.filter((a) => a.commentId === comment.id),
   }));
   const attachments = allAttachments.filter((a) => a.commentId === null);
-  return { issue: issue as Issue, reporterName: profiles.full_name ?? profiles.email, comments, history, attachments };
+  return {
+    issue: issue as Issue,
+    reporterName: reporter.full_name ?? reporter.email,
+    assigneeName: assignee ? assignee.full_name ?? assignee.email : null,
+    comments,
+    history,
+    attachments,
+  };
 }

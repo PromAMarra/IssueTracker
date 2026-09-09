@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getEngagement } from '@/lib/data/engagements';
+import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
 import { listIssues } from '@/lib/data/issues';
 import { Board } from '@/components/issues/Board';
 import { NewIssueForm } from '@/components/issues/NewIssueForm';
@@ -16,9 +16,10 @@ export default async function BoardPage({
   const session = await getSessionUser();
   if (!session) redirect('/login');
 
-  const [engagement, issues] = await Promise.all([
+  const [engagement, issues, teamMembers] = await Promise.all([
     getEngagement(params.engagementId),
     listIssues(params.engagementId),
+    listPrometeiaTeam(params.engagementId),
   ]);
   if (!engagement) redirect('/');
 
@@ -28,16 +29,16 @@ export default async function BoardPage({
         engagementId={engagement.id}
         modules={engagement.modules}
         testCasePackages={engagement.test_case_packages}
-        teamMembers={engagement.team_members}
+        teamMembers={teamMembers}
       />
-      <Board issues={issues} teamMembers={engagement.team_members} isProm={session.profile.is_prometeia} />
+      <Board issues={issues} teamMembers={teamMembers} isProm={session.profile.is_prometeia} />
       {searchParams.issue && (
         <IssueDetailModal
           issueId={searchParams.issue}
           engagementId={engagement.id}
           isProm={session.profile.is_prometeia}
           modules={engagement.modules}
-          teamMembers={engagement.team_members}
+          teamMembers={teamMembers}
         />
       )}
     </div>

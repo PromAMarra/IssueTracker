@@ -1,22 +1,28 @@
 import { createServerClient } from '@/lib/supabase/server';
 import type { Issue, IssueHistoryEntry } from '@/lib/types';
 
-export type IssueWithReporter = Issue & { reporterName: string };
+export type IssueWithNames = Issue & { reporterName: string; assigneeName: string | null };
 
-export async function listIssues(engagementId: string): Promise<IssueWithReporter[]> {
+export async function listIssues(engagementId: string): Promise<IssueWithNames[]> {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('issues')
-    .select('*, profiles(full_name, email)')
+    .select(
+      '*, reporter:profiles!reporter_id(full_name, email), assignee:profiles!assignee_id(full_name, email)',
+    )
     .eq('engagement_id', engagementId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data as unknown as (Issue & { profiles: { full_name: string | null; email: string } })[]).map(
-    ({ profiles, ...issue }) => ({
-      ...issue,
-      reporterName: profiles.full_name ?? profiles.email,
-    }),
-  );
+  return (
+    data as unknown as (Issue & {
+      reporter: { full_name: string | null; email: string };
+      assignee: { full_name: string | null; email: string } | null;
+    })[]
+  ).map(({ reporter, assignee, ...issue }) => ({
+    ...issue,
+    reporterName: reporter.full_name ?? reporter.email,
+    assigneeName: assignee ? assignee.full_name ?? assignee.email : null,
+  }));
 }
 
 export async function getIssue(issueId: string): Promise<Issue | null> {
