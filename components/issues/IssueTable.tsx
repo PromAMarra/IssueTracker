@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { PRIORITIES, STATUSES } from '@/lib/types';
@@ -67,8 +68,8 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
     }
   }
 
-  function handleExport() {
-    downloadWorkbook(
+  async function handleExport() {
+    await downloadWorkbook(
       [
         {
           name: 'Issues',
@@ -168,9 +169,9 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
               <tr key={issue.id} className="border-b border-ink-soft/5 last:border-0 hover:bg-surface">
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">{issue.key}</td>
                 <td className="px-3 py-2">
-                  <a href={`?issue=${issue.id}`} className="text-ink hover:underline">
+                  <Link href={`?issue=${issue.id}`} scroll={false} className="text-ink hover:underline">
                     {issue.title}
-                  </a>
+                  </Link>
                 </td>
                 <td className="px-3 py-2">
                   <StatusBadge status={issue.status} />

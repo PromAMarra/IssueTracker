@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createServerClient } from '@/lib/supabase/server';
 import type { SlaDays } from '@/lib/types';
 
@@ -11,7 +12,9 @@ export type Engagement = EngagementSummary & {
   sla_days: SlaDays;
 };
 
-export async function listAccessibleEngagements(): Promise<EngagementSummary[]> {
+// These are each called once from an engagement's layout and again from the
+// page rendered inside it; cache() dedupes that to one query per request.
+export const listAccessibleEngagements = cache(async (): Promise<EngagementSummary[]> => {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagements')
@@ -19,9 +22,9 @@ export async function listAccessibleEngagements(): Promise<EngagementSummary[]> 
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
-}
+});
 
-export async function getEngagement(id: string): Promise<Engagement | null> {
+export const getEngagement = cache(async (id: string): Promise<Engagement | null> => {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagements')
@@ -30,14 +33,14 @@ export async function getEngagement(id: string): Promise<Engagement | null> {
     .maybeSingle();
   if (error) throw error;
   return data;
-}
+});
 
 export type TeamMember = { id: string; name: string };
 
 // The Prometeia roster for this engagement (used to populate the assignee
 // picker). Any engagement member — bank or Prometeia — can read this; only
 // Prometeia can manage the roster itself (see app/actions/engagements.ts).
-export async function listPrometeiaTeam(engagementId: string): Promise<TeamMember[]> {
+export const listPrometeiaTeam = cache(async (engagementId: string): Promise<TeamMember[]> => {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagement_members')
@@ -48,4 +51,4 @@ export async function listPrometeiaTeam(engagementId: string): Promise<TeamMembe
   return (
     data as unknown as { user_id: string; profiles: { full_name: string | null; email: string } }[]
   ).map((row) => ({ id: row.user_id, name: row.profiles.full_name ?? row.profiles.email }));
-}
+});

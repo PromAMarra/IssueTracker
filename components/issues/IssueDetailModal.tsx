@@ -65,6 +65,9 @@ export function IssueDetailModal({
 
   function close() {
     router.push(pathname);
+    // One refresh of the underlying board/list when the modal closes, rather
+    // than after every single field edit made while it was open.
+    router.refresh();
   }
 
   async function handleField(action: () => Promise<void>) {
@@ -73,7 +76,6 @@ export function IssueDetailModal({
     try {
       await action();
       await reload();
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {

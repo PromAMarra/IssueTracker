@@ -318,22 +318,25 @@ export async function listAttachments(issueId: string): Promise<AttachmentRow[]>
     comment_id: string | null;
     profiles: { full_name: string | null; email: string };
   }[];
+  if (rows.length === 0) return [];
 
-  return Promise.all(
-    rows.map(async (row) => {
-      const { data: signed } = await supabase.storage
-        .from('issue-attachments')
-        .createSignedUrl(row.storage_path, 3600);
-      return {
-        id: row.id,
-        fileName: row.file_name,
-        url: signed?.signedUrl ?? '',
-        uploadedByName: row.profiles.full_name ?? row.profiles.email,
-        uploadedAt: row.uploaded_at,
-        commentId: row.comment_id,
-      };
-    }),
-  );
+  const { data: signedUrls, error: signError } = await supabase.storage
+    .from('issue-attachments')
+    .createSignedUrls(
+      rows.map((r) => r.storage_path),
+      3600,
+    );
+  if (signError) throw signError;
+  const urlByPath = new Map((signedUrls ?? []).map((s) => [s.path, s.signedUrl ?? '']));
+
+  return rows.map((row) => ({
+    id: row.id,
+    fileName: row.file_name,
+    url: urlByPath.get(row.storage_path) ?? '',
+    uploadedByName: row.profiles.full_name ?? row.profiles.email,
+    uploadedAt: row.uploaded_at,
+    commentId: row.comment_id,
+  }));
 }
 
 export async function uploadAttachment(

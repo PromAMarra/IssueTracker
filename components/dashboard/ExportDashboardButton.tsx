@@ -23,10 +23,10 @@ export function ExportDashboardButton({
   moduleVol: { module: string; count: number }[];
   orgVol: { org: Org; count: number }[];
 }) {
-  function handleExport() {
+  async function handleExport() {
     const safeName = engagementName.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'engagement';
 
-    downloadWorkbook(
+    await downloadWorkbook(
       [
         {
           name: 'Status',

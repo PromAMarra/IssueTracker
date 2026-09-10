@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { updateIssueAssignee, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
@@ -66,9 +67,13 @@ export function Board({
                     </span>
                     <PriorityBadge priority={issue.priority} />
                   </div>
-                  <a href={`?issue=${issue.id}`} className="mb-1 block text-sm font-medium text-ink hover:underline">
+                  <Link
+                    href={`?issue=${issue.id}`}
+                    scroll={false}
+                    className="mb-1 block text-sm font-medium text-ink hover:underline"
+                  >
                     {issue.title}
-                  </a>
+                  </Link>
                   <p className="mb-2 text-xs text-ink-soft">
                     Reported by {issue.reporterName}
                     {issue.module ? ` · ${issue.module}` : ''}

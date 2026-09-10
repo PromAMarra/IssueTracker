@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx';
-
 export type XlsxSheet = { name: string; rows: Record<string, unknown>[] };
 
 // A cell starting with one of these characters can be interpreted as a formula
@@ -17,7 +15,10 @@ function sanitizeRow(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, sanitizeCell(value)]));
 }
 
-export function downloadWorkbook(sheets: XlsxSheet[], filename: string) {
+// Dynamically imported — xlsx is a large library that only needs to load
+// when someone actually clicks an export button, not on every page visit.
+export async function downloadWorkbook(sheets: XlsxSheet[], filename: string) {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   for (const sheet of sheets) {
     const ws = XLSX.utils.json_to_sheet(sheet.rows.map(sanitizeRow));

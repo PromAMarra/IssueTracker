@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createServerClient } from '@/lib/supabase/server';
 
 export type Profile = {
@@ -13,7 +14,10 @@ export type SessionUser = {
   profile: Profile;
 };
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Every layout/page/server action in a request calls this independently.
+// cache() dedupes those calls to a single Supabase Auth round trip + profile
+// query per request instead of re-fetching the same thing 3+ times.
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = createServerClient();
   const {
     data: { user },
@@ -29,4 +33,4 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!profile) return null;
 
   return { id: user.id, email: user.email ?? profile.email, profile };
-}
+});

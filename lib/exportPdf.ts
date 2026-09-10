@@ -1,9 +1,15 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
+// Dynamically imported below — html2canvas + jsPDF pull in a large rendering
+// dependency chain that should only load when someone actually clicks
+// "Download as PDF", not on every dashboard visit.
 export async function exportElementToPdf(elementId: string, title: string, filename: string): Promise<void> {
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Could not find the dashboard content to export.');
+
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
+
   const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
   const imgData = canvas.toDataURL('image/png');
 
