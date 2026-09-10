@@ -10,6 +10,10 @@ export type EngagementConfigValues = {
   modules: string[];
   testCasePackages: string[];
   slaDays: SlaDays;
+  sitStartDate: string | null;
+  sitEndDate: string | null;
+  uatStartDate: string | null;
+  uatEndDate: string | null;
 };
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
@@ -36,6 +40,10 @@ export function EngagementConfigForm({
   const [modules, setModules] = useState(initial.modules.join(', '));
   const [testCasePackages, setTestCasePackages] = useState(initial.testCasePackages.join(', '));
   const [sla, setSla] = useState(initial.slaDays);
+  const [sitStartDate, setSitStartDate] = useState(initial.sitStartDate ?? '');
+  const [sitEndDate, setSitEndDate] = useState(initial.sitEndDate ?? '');
+  const [uatStartDate, setUatStartDate] = useState(initial.uatStartDate ?? '');
+  const [uatEndDate, setUatEndDate] = useState(initial.uatEndDate ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +59,10 @@ export function EngagementConfigForm({
         modules: splitList(modules),
         testCasePackages: splitList(testCasePackages),
         slaDays: sla,
+        sitStartDate: sitStartDate || null,
+        sitEndDate: sitEndDate || null,
+        uatStartDate: uatStartDate || null,
+        uatEndDate: uatEndDate || null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -109,6 +121,50 @@ export function EngagementConfigForm({
           className="rounded border border-ink-soft/30 px-3 py-2"
         />
       </label>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium text-ink">Testing periods</legend>
+        <span className="text-xs text-ink-soft">
+          Used by the dashboard's daily defects report. Leave blank for a period that doesn't apply.
+        </span>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            SIT start
+            <input
+              type="date"
+              value={sitStartDate}
+              onChange={(e) => setSitStartDate(e.target.value)}
+              className="rounded border border-ink-soft/30 px-2 py-1"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            SIT end
+            <input
+              type="date"
+              value={sitEndDate}
+              onChange={(e) => setSitEndDate(e.target.value)}
+              className="rounded border border-ink-soft/30 px-2 py-1"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            UAT start
+            <input
+              type="date"
+              value={uatStartDate}
+              onChange={(e) => setUatStartDate(e.target.value)}
+              className="rounded border border-ink-soft/30 px-2 py-1"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            UAT end
+            <input
+              type="date"
+              value={uatEndDate}
+              onChange={(e) => setUatEndDate(e.target.value)}
+              className="rounded border border-ink-soft/30 px-2 py-1"
+            />
+          </label>
+        </div>
+      </fieldset>
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium text-ink">SLA target (days to close)</legend>
         <div className="grid grid-cols-4 gap-3">

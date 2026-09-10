@@ -13,6 +13,10 @@ export type EngagementInput = {
   modules: string[];
   testCasePackages: string[];
   slaDays: SlaDays;
+  sitStartDate: string | null;
+  sitEndDate: string | null;
+  uatStartDate: string | null;
+  uatEndDate: string | null;
 };
 
 async function requireProm() {
@@ -21,8 +25,18 @@ async function requireProm() {
   return session;
 }
 
+function validatePeriods(input: EngagementInput) {
+  if (input.sitStartDate && input.sitEndDate && input.sitStartDate > input.sitEndDate) {
+    throw new Error('SIT start date must be on or before the SIT end date.');
+  }
+  if (input.uatStartDate && input.uatEndDate && input.uatStartDate > input.uatEndDate) {
+    throw new Error('UAT start date must be on or before the UAT end date.');
+  }
+}
+
 export async function createEngagement(input: EngagementInput): Promise<string> {
   const session = await requireProm();
+  validatePeriods(input);
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagements')
@@ -33,6 +47,10 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
       modules: input.modules,
       test_case_packages: input.testCasePackages,
       sla_days: input.slaDays,
+      sit_start_date: input.sitStartDate,
+      sit_end_date: input.sitEndDate,
+      uat_start_date: input.uatStartDate,
+      uat_end_date: input.uatEndDate,
       created_by: session.id,
     })
     .select('id')
@@ -44,6 +62,7 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
 
 export async function updateEngagementSettings(engagementId: string, input: EngagementInput) {
   await requireProm();
+  validatePeriods(input);
   const supabase = createServerClient();
   const { error } = await supabase
     .from('engagements')
@@ -54,10 +73,15 @@ export async function updateEngagementSettings(engagementId: string, input: Enga
       modules: input.modules,
       test_case_packages: input.testCasePackages,
       sla_days: input.slaDays,
+      sit_start_date: input.sitStartDate,
+      sit_end_date: input.sitEndDate,
+      uat_start_date: input.uatStartDate,
+      uat_end_date: input.uatEndDate,
     })
     .eq('id', engagementId);
   if (error) throw error;
   revalidatePath(`/${engagementId}/settings`);
+  revalidatePath(`/${engagementId}/dashboard`);
 }
 
 export async function uploadBankLogo(engagementId: string, formData: FormData) {

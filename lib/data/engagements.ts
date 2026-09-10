@@ -10,6 +10,10 @@ export type Engagement = EngagementSummary & {
   modules: string[];
   test_case_packages: string[];
   sla_days: SlaDays;
+  sit_start_date: string | null;
+  sit_end_date: string | null;
+  uat_start_date: string | null;
+  uat_end_date: string | null;
 };
 
 // These are each called once from an engagement's layout and again from the
@@ -28,7 +32,9 @@ export const getEngagement = cache(async (id: string): Promise<Engagement | null
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('engagements')
-    .select('id, name, bank_name, bank_logo_url, key_prefix, modules, test_case_packages, sla_days')
+    .select(
+      'id, name, bank_name, bank_logo_url, key_prefix, modules, test_case_packages, sla_days, sit_start_date, sit_end_date, uat_start_date, uat_end_date',
+    )
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;

@@ -34,6 +34,10 @@ export default async function SettingsPage({ params }: { params: { engagementId:
             modules: engagement.modules,
             testCasePackages: engagement.test_case_packages,
             slaDays: engagement.sla_days,
+            sitStartDate: engagement.sit_start_date,
+            sitEndDate: engagement.sit_end_date,
+            uatStartDate: engagement.uat_start_date,
+            uatEndDate: engagement.uat_end_date,
           }}
         />
       </section>

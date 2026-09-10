@@ -4,6 +4,7 @@ import { getEngagement } from '@/lib/data/engagements';
 import { listHistoryForEngagement, listIssues } from '@/lib/data/issues';
 import {
   agingReport,
+  dailyDefects,
   moduleVolume,
   orgVolume,
   priorityDistribution,
@@ -17,6 +18,7 @@ import { StatusDistributionChart } from '@/components/dashboard/StatusDistributi
 import { PriorityDistributionChart } from '@/components/dashboard/PriorityDistributionChart';
 import { TimeToCloseChart } from '@/components/dashboard/TimeToCloseChart';
 import { ThroughputChart } from '@/components/dashboard/ThroughputChart';
+import { DailyDefectsChart } from '@/components/dashboard/DailyDefectsChart';
 import { AgingReportTable } from '@/components/dashboard/AgingReportTable';
 import { ModuleVolumeChart } from '@/components/dashboard/ModuleVolumeChart';
 import { OrgVolumeChart } from '@/components/dashboard/OrgVolumeChart';
@@ -47,6 +49,17 @@ export default async function DashboardPage({ params }: { params: { engagementId
   const orgVol = orgVolume(issues);
   const aging = agingReport(issues, engagement.sla_days, now);
 
+  const sitPeriod =
+    engagement.sit_start_date && engagement.sit_end_date
+      ? { start: engagement.sit_start_date, end: engagement.sit_end_date }
+      : null;
+  const uatPeriod =
+    engagement.uat_start_date && engagement.uat_end_date
+      ? { start: engagement.uat_start_date, end: engagement.uat_end_date }
+      : null;
+  const sitDaily = sitPeriod ? dailyDefects(issues, sitPeriod.start, sitPeriod.end) : [];
+  const uatDaily = uatPeriod ? dailyDefects(issues, uatPeriod.start, uatPeriod.end) : [];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end gap-2">
@@ -59,6 +72,8 @@ export default async function DashboardPage({ params }: { params: { engagementId
           aging={aging}
           moduleVol={moduleVol}
           orgVol={orgVol}
+          sitDaily={sitDaily}
+          uatDaily={uatDaily}
         />
         <ExportPdfButton targetId="dashboard-export-root" engagementName={engagement.name} />
       </div>
@@ -73,6 +88,7 @@ export default async function DashboardPage({ params }: { params: { engagementId
             sublabel={`${reopen.reopenedCount} of ${reopen.everClosedCount} closed`}
           />
         </div>
+        <DailyDefectsChart issues={issues} sitPeriod={sitPeriod} uatPeriod={uatPeriod} />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <StatusDistributionChart distribution={statusDist} />
           <PriorityDistributionChart distribution={priorityDist} />

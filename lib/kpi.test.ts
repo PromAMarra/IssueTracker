@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   agingReport,
+  dailyDefects,
   moduleVolume,
   orgVolume,
   priorityDistribution,
@@ -170,6 +171,35 @@ describe('throughputByWeek', () => {
     const jan5 = buckets.find((b) => b.weekStart === '2026-01-05')!;
     expect(jan5.opened).toBe(1);
     expect(jan5.closed).toBe(0);
+  });
+});
+
+describe('dailyDefects', () => {
+  it('buckets opened/closed per day and computes a historical live-defect snapshot', () => {
+    const issues = [
+      // open on day 1, still open throughout
+      issue({ id: 'a', created_at: '2026-02-01T09:00:00.000Z', status: 'ongoing' }),
+      // open on day 1, closed on day 3
+      issue({
+        id: 'b',
+        created_at: '2026-02-01T10:00:00.000Z',
+        status: 'closed',
+        closed_at: '2026-02-03T08:00:00.000Z',
+      }),
+      // open on day 2
+      issue({ id: 'c', created_at: '2026-02-02T12:00:00.000Z', status: 'backlog' }),
+    ];
+    const buckets = dailyDefects(issues, '2026-02-01', '2026-02-03');
+    expect(buckets.map((b) => b.date)).toEqual(['2026-02-01', '2026-02-02', '2026-02-03']);
+
+    expect(buckets[0]).toEqual({ date: '2026-02-01', opened: 2, closed: 0, liveDefects: 2 });
+    expect(buckets[1]).toEqual({ date: '2026-02-02', opened: 1, closed: 0, liveDefects: 3 });
+    // b closes on day 3, so it drops out of the live count as of that day's end
+    expect(buckets[2]).toEqual({ date: '2026-02-03', opened: 0, closed: 1, liveDefects: 2 });
+  });
+
+  it('returns an empty array when the range is empty or inverted', () => {
+    expect(dailyDefects([], '2026-02-05', '2026-02-01')).toEqual([]);
   });
 });
 

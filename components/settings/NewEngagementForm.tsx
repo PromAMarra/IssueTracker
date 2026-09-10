@@ -11,6 +11,10 @@ const EMPTY = {
   modules: [] as string[],
   testCasePackages: [] as string[],
   slaDays: { critical: 2, high: 5, medium: 10, low: 20 },
+  sitStartDate: null as string | null,
+  sitEndDate: null as string | null,
+  uatStartDate: null as string | null,
+  uatEndDate: null as string | null,
 };
 
 export function NewEngagementForm() {

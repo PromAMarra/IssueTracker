@@ -119,6 +119,42 @@ export function throughputByWeek(issues: Issue[], weeks: number, now: Date): Thr
   return buckets;
 }
 
+export type DailyDefectBucket = { date: string; opened: number; closed: number; liveDefects: number };
+
+// One row per calendar day in [startDate, endDate] (inclusive, "YYYY-MM-DD").
+// liveDefects is a historical snapshot — issues created on/before that day
+// and not yet closed as of the end of that day — not just today's open count.
+export function dailyDefects(issues: Issue[], startDate: string, endDate: string): DailyDefectBucket[] {
+  const days: string[] = [];
+  const cursor = new Date(`${startDate}T00:00:00.000Z`);
+  const end = new Date(`${endDate}T00:00:00.000Z`);
+  while (cursor <= end) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  const openedCount = new Map<string, number>();
+  const closedCount = new Map<string, number>();
+  for (const issue of issues) {
+    const openedDay = issue.created_at.slice(0, 10);
+    openedCount.set(openedDay, (openedCount.get(openedDay) ?? 0) + 1);
+    if (issue.closed_at) {
+      const closedDay = issue.closed_at.slice(0, 10);
+      closedCount.set(closedDay, (closedCount.get(closedDay) ?? 0) + 1);
+    }
+  }
+
+  return days.map((day) => {
+    const dayEndMs = new Date(`${day}T23:59:59.999Z`).getTime();
+    const liveDefects = issues.filter((i) => {
+      const createdMs = new Date(i.created_at).getTime();
+      const closedMs = i.closed_at ? new Date(i.closed_at).getTime() : null;
+      return createdMs <= dayEndMs && (closedMs === null || closedMs > dayEndMs);
+    }).length;
+    return { date: day, opened: openedCount.get(day) ?? 0, closed: closedCount.get(day) ?? 0, liveDefects };
+  });
+}
+
 export type ReopenRateResult = { everClosedCount: number; reopenedCount: number; ratePercent: number };
 
 export function reopenRate(issues: Issue[], history: IssueHistoryEntry[]): ReopenRateResult {

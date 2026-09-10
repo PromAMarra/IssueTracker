@@ -1,7 +1,7 @@
 'use client';
 
 import { downloadWorkbook } from '@/lib/exportXlsx';
-import type { AgingRow, ThroughputBucket, TimeToCloseRow } from '@/lib/kpi';
+import type { AgingRow, DailyDefectBucket, ThroughputBucket, TimeToCloseRow } from '@/lib/kpi';
 import type { Org, Priority, Status } from '@/lib/types';
 
 export function ExportDashboardButton({
@@ -13,6 +13,8 @@ export function ExportDashboardButton({
   aging,
   moduleVol,
   orgVol,
+  sitDaily,
+  uatDaily,
 }: {
   engagementName: string;
   statusDist: Record<Status, number>;
@@ -22,12 +24,18 @@ export function ExportDashboardButton({
   aging: AgingRow[];
   moduleVol: { module: string; count: number }[];
   orgVol: { org: Org; count: number }[];
+  sitDaily: DailyDefectBucket[];
+  uatDaily: DailyDefectBucket[];
 }) {
   async function handleExport() {
     const safeName = engagementName.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'engagement';
+    const dailyRows = (rows: DailyDefectBucket[]) =>
+      rows.map((r) => ({ Date: r.date, 'Defects new': r.opened, 'Defects closed': r.closed, 'Current live defects': r.liveDefects }));
 
     await downloadWorkbook(
       [
+        ...(sitDaily.length > 0 ? [{ name: 'Daily Defects (SIT)', rows: dailyRows(sitDaily) }] : []),
+        ...(uatDaily.length > 0 ? [{ name: 'Daily Defects (UAT)', rows: dailyRows(uatDaily) }] : []),
         {
           name: 'Status',
           rows: Object.entries(statusDist).map(([status, count]) => ({ Status: status, Count: count })),
