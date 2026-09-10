@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
-import { listIssues } from '@/lib/data/issues';
+import { listHistoryForEngagement, listIssues } from '@/lib/data/issues';
 import { IssueTable } from '@/components/issues/IssueTable';
 import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
 
@@ -15,10 +15,11 @@ export default async function ListPage({
   const session = await getSessionUser();
   if (!session) redirect('/login');
 
-  const [engagement, issues, teamMembers] = await Promise.all([
+  const [engagement, issues, teamMembers, history] = await Promise.all([
     getEngagement(params.engagementId),
     listIssues(params.engagementId),
     listPrometeiaTeam(params.engagementId),
+    listHistoryForEngagement(params.engagementId),
   ]);
   if (!engagement) redirect('/');
 
@@ -29,6 +30,7 @@ export default async function ListPage({
         modules={engagement.modules}
         teamMembers={teamMembers}
         isProm={session.profile.is_prometeia}
+        history={history}
       />
       {searchParams.issue && (
         <IssueDetailModal

@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { updateIssueAssignee, updateIssueModule, updateIssuePriority } from '@/app/actions/issues';
+import { statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
-import type { Org, Priority, Status } from '@/lib/types';
+import type { IssueHistoryEntry, Org, Priority, Status } from '@/lib/types';
 import type { IssueWithNames } from '@/lib/data/issues';
 import type { TeamMember } from '@/lib/data/engagements';
 import { downloadWorkbook } from '@/lib/exportXlsx';
@@ -49,8 +50,14 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'closed_at', label: 'Closed' },
 ];
 
+const TOTAL_COLUMNS = COLUMNS.length + STATUSES.length;
+
 function formatDate(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString('en-GB') : '—';
+}
+
+function formatDuration(days: number): string {
+  return days > 0 ? `${days.toFixed(1)}d` : '—';
 }
 
 export function IssueTable({
@@ -58,11 +65,13 @@ export function IssueTable({
   modules,
   teamMembers,
   isProm,
+  history,
 }: {
   issues: IssueWithNames[];
   modules: string[];
   teamMembers: TeamMember[];
   isProm: boolean;
+  history: IssueHistoryEntry[];
 }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
@@ -73,6 +82,22 @@ export function IssueTable({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const durationsById = useMemo(() => {
+    const historyByIssue = new Map<string, { field: string; fromValue: string | null; changedAt: string }[]>();
+    for (const h of history) {
+      if (h.field !== 'status') continue;
+      const list = historyByIssue.get(h.issue_id) ?? [];
+      list.push({ field: h.field, fromValue: h.from_value, changedAt: h.changed_at });
+      historyByIssue.set(h.issue_id, list);
+    }
+    const now = new Date();
+    const map = new Map<string, Record<Status, number>>();
+    for (const issue of issues) {
+      map.set(issue.id, statusDurations(issue, historyByIssue.get(issue.id) ?? [], now));
+    }
+    return map;
+  }, [issues, history]);
 
   const rows = useMemo(() => {
     let result = issues;
@@ -112,19 +137,26 @@ export function IssueTable({
       [
         {
           name: 'Issues',
-          rows: rows.map((issue) => ({
-            Key: issue.key,
-            Title: issue.title,
-            Status: STATUS_LABELS[issue.status],
-            Priority: issue.priority,
-            Module: issue.module ?? 'Unassigned',
-            Assignee: issue.assigneeName ?? '',
-            Reporter: issue.reporterName,
-            'Raised by': ORG_LABELS[issue.org],
-            Opened: new Date(issue.created_at).toLocaleDateString(),
-            'Last updated': new Date(issue.updated_at).toLocaleDateString(),
-            Closed: issue.closed_at ? new Date(issue.closed_at).toLocaleDateString() : '',
-          })),
+          rows: rows.map((issue) => {
+            const durations = durationsById.get(issue.id);
+            const durationCols = Object.fromEntries(
+              STATUSES.map((s) => [`Time in ${STATUS_LABELS[s]} (d)`, durations ? Number(durations[s].toFixed(1)) : 0]),
+            );
+            return {
+              Key: issue.key,
+              Title: issue.title,
+              Status: STATUS_LABELS[issue.status],
+              Priority: issue.priority,
+              Module: issue.module ?? 'Unassigned',
+              Assignee: issue.assigneeName ?? '',
+              Reporter: issue.reporterName,
+              'Raised by': ORG_LABELS[issue.org],
+              Opened: new Date(issue.created_at).toLocaleDateString(),
+              'Last updated': new Date(issue.updated_at).toLocaleDateString(),
+              Closed: issue.closed_at ? new Date(issue.closed_at).toLocaleDateString() : '',
+              ...durationCols,
+            };
+          }),
         },
       ],
       `issues-${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -203,6 +235,11 @@ export function IssueTable({
                 >
                   {col.label}
                   {sortKey === col.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+                </th>
+              ))}
+              {STATUSES.map((s) => (
+                <th key={s} className="whitespace-nowrap px-3 py-2">
+                  Time in {STATUS_LABELS[s]}
                 </th>
               ))}
             </tr>
@@ -291,11 +328,19 @@ export function IssueTable({
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
                   {formatDate(issue.closed_at)}
                 </td>
+                {STATUSES.map((s) => {
+                  const durations = durationsById.get(issue.id);
+                  return (
+                    <td key={s} className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
+                      {formatDuration(durations ? durations[s] : 0)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length} className="px-3 py-6 text-center text-ink-soft">
+                <td colSpan={TOTAL_COLUMNS} className="px-3 py-6 text-center text-ink-soft">
                   No issues match these filters.
                 </td>
               </tr>
