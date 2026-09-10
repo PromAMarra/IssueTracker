@@ -25,13 +25,18 @@ export function DailyDefectsChart({
   issues,
   sitPeriod,
   uatPeriod,
+  forcedPhase,
 }: {
   issues: Issue[];
   sitPeriod: DateRange | null;
   uatPeriod: DateRange | null;
+  // When the page-level SIT/UAT filter is active, lock the chart to that
+  // same period instead of letting it pick its own independently.
+  forcedPhase?: 'sit' | 'uat' | null;
 }) {
   const [selected, setSelected] = useState<'sit' | 'uat'>(sitPeriod ? 'sit' : 'uat');
-  const period = (selected === 'sit' ? sitPeriod : uatPeriod) ?? sitPeriod ?? uatPeriod;
+  const effectiveSelected = forcedPhase ?? selected;
+  const period = (effectiveSelected === 'sit' ? sitPeriod : uatPeriod) ?? sitPeriod ?? uatPeriod;
 
   const data = useMemo(() => {
     if (!period) return [];
@@ -55,7 +60,7 @@ export function DailyDefectsChart({
         <h3 className="text-sm font-semibold text-ink">
           Daily defects{period ? ` (${formatDate(period.start)}–${formatDate(period.end)})` : ''}
         </h3>
-        {sitPeriod && uatPeriod && (
+        {!forcedPhase && sitPeriod && uatPeriod && (
           <div className="flex gap-1 text-xs">
             <button
               type="button"

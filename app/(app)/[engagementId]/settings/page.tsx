@@ -13,9 +13,10 @@ export default async function SettingsPage({ params }: { params: { engagementId:
   if (!session) redirect('/login');
   if (!session.profile.is_prometeia) redirect(`/${params.engagementId}/board`);
 
-  const [engagement, bankMembers, prometeiaMembers, platformSettings] = await Promise.all([
+  const [engagement, bankMembers, sitMembers, prometeiaMembers, platformSettings] = await Promise.all([
     getEngagement(params.engagementId),
     listMembers(params.engagementId, 'bank'),
+    listMembers(params.engagementId, 'sit'),
     listMembers(params.engagementId, 'prometeia'),
     getPlatformSettings(),
   ]);
@@ -51,6 +52,9 @@ export default async function SettingsPage({ params }: { params: { engagementId:
       </section>
       <section>
         <MemberManager engagementId={params.engagementId} role="prometeia" initialMembers={prometeiaMembers} />
+      </section>
+      <section>
+        <MemberManager engagementId={params.engagementId} role="sit" initialMembers={sitMembers} />
       </section>
       <section>
         <MemberManager engagementId={params.engagementId} role="bank" initialMembers={bankMembers} />

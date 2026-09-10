@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
-import type { Issue, Priority, Status } from '@/lib/types';
+import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
   engagementId: string;
@@ -43,6 +43,18 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
       ? input.testCasePackage
       : null;
 
+  let org: Org = session.profile.is_prometeia ? 'prometeia' : 'bank';
+  if (!session.profile.is_prometeia) {
+    const { data: reporterMembership, error: membershipError } = await supabase
+      .from('engagement_members')
+      .select('phase')
+      .eq('engagement_id', input.engagementId)
+      .eq('user_id', session.id)
+      .maybeSingle();
+    if (membershipError) throw membershipError;
+    if (reporterMembership?.phase === 'sit') org = 'sit';
+  }
+
   let assigneeId: string | null = null;
   if (input.assigneeId) {
     const { data: assigneeMember, error: assigneeError } = await supabase
@@ -72,7 +84,7 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
       module,
       test_case_package: testCasePackage,
       test_case_step: testCaseStep || null,
-      org: session.profile.is_prometeia ? 'prometeia' : 'bank',
+      org,
       reporter_id: session.id,
       assignee_id: assigneeId,
     })

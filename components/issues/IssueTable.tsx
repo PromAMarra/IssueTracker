@@ -28,6 +28,8 @@ const STATUS_LABELS: Record<Status, string> = {
   rejected: 'Rejected',
 };
 
+const ORG_LABELS: Record<Org, string> = { bank: 'Bank', sit: 'SIT', prometeia: 'Prometeia' };
+
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'key', label: 'Key' },
   { key: 'title', label: 'Title' },
@@ -81,7 +83,7 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
             Module: issue.module ?? 'Unassigned',
             Assignee: issue.assigneeName ?? '',
             Reporter: issue.reporterName,
-            'Raised by': issue.org,
+            'Raised by': ORG_LABELS[issue.org],
             Opened: new Date(issue.created_at).toLocaleDateString(),
           })),
         },
@@ -133,10 +135,11 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
         <select
           value={orgFilter}
           onChange={(e) => setOrgFilter(e.target.value as Org | '')}
-          className="rounded border border-ink-soft/30 px-2 py-1 text-sm capitalize"
+          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
         >
-          <option value="">Bank + Prometeia</option>
+          <option value="">Bank + SIT + Prometeia</option>
           <option value="bank">Bank</option>
+          <option value="sit">SIT</option>
           <option value="prometeia">Prometeia</option>
         </select>
         <button
@@ -182,7 +185,7 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
                 <td className="px-3 py-2 text-ink-soft">{issue.module ?? 'Unassigned'}</td>
                 <td className="px-3 py-2 text-ink-soft">{issue.assigneeName ?? '—'}</td>
                 <td className="px-3 py-2 text-ink-soft">{issue.reporterName}</td>
-                <td className="px-3 py-2 capitalize text-ink-soft">{issue.org}</td>
+                <td className="px-3 py-2 text-ink-soft">{ORG_LABELS[issue.org]}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
                   {new Date(issue.created_at).toLocaleDateString('en-GB')}
                 </td>

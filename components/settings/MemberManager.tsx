@@ -4,7 +4,16 @@ import { useState, type FormEvent } from 'react';
 import { addMemberByEmail, type Member, type MemberRole } from '@/app/actions/engagements';
 
 const COPY: Record<MemberRole, { title: string; empty: string; placeholder: string }> = {
-  bank: { title: 'Bank members', empty: 'No bank members yet.', placeholder: 'person@bank.com' },
+  bank: {
+    title: 'Bank members (UAT)',
+    empty: 'No bank members yet.',
+    placeholder: 'person@bank.com',
+  },
+  sit: {
+    title: 'SIT members (IVS)',
+    empty: 'No SIT members yet — tickets they report will be tagged as SIT, not UAT.',
+    placeholder: 'person@ivs.com',
+  },
   prometeia: {
     title: 'Prometeia team',
     empty: 'No Prometeia team members yet — add anyone who should be assignable to tickets.',

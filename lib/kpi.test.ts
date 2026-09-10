@@ -85,14 +85,16 @@ describe('moduleVolume', () => {
 });
 
 describe('orgVolume', () => {
-  it('counts issues raised by each org', () => {
+  it('counts issues raised by each org, including SIT', () => {
     const issues = [
       issue({ id: 'a', org: 'bank' }),
       issue({ id: 'b', org: 'bank' }),
       issue({ id: 'c', org: 'prometeia' }),
+      issue({ id: 'd', org: 'sit' }),
     ];
     expect(orgVolume(issues)).toEqual([
       { org: 'bank', count: 2 },
+      { org: 'sit', count: 1 },
       { org: 'prometeia', count: 1 },
     ]);
   });

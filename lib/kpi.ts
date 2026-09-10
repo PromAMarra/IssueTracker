@@ -32,9 +32,11 @@ export function moduleVolume(issues: Issue[]): { module: string; count: number }
 
 export function orgVolume(issues: Issue[]): { org: Issue['org']; count: number }[] {
   const bank = issues.filter((i) => i.org === 'bank').length;
+  const sit = issues.filter((i) => i.org === 'sit').length;
   const prometeia = issues.filter((i) => i.org === 'prometeia').length;
   return [
     { org: 'bank' as const, count: bank },
+    { org: 'sit' as const, count: sit },
     { org: 'prometeia' as const, count: prometeia },
   ];
 }

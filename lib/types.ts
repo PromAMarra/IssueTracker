@@ -1,6 +1,6 @@
 export type Status = 'backlog' | 'ongoing' | 'ready_for_test' | 'closed' | 'rejected';
 export type Priority = 'critical' | 'high' | 'medium' | 'low';
-export type Org = 'prometeia' | 'bank';
+export type Org = 'prometeia' | 'bank' | 'sit';
 
 export type Issue = {
   id: string;

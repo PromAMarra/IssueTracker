@@ -106,7 +106,7 @@ export async function uploadBankLogo(engagementId: string, formData: FormData) {
   revalidatePath(`/${engagementId}/settings`);
 }
 
-export type MemberRole = 'bank' | 'prometeia';
+export type MemberRole = 'bank' | 'sit' | 'prometeia';
 
 export type AddMemberResult = { ok: boolean; message: string };
 
@@ -131,14 +131,14 @@ export async function addMemberByEmail(
       ok: false,
       message:
         role === 'prometeia'
-          ? `${email} is registered as a bank account, not a Prometeia account.`
-          : `${email} is registered as a Prometeia account, not a bank account.`,
+          ? `${email} is registered as a bank/SIT account, not a Prometeia account.`
+          : `${email} is registered as a Prometeia account, not a bank/SIT account.`,
     };
   }
 
   const { error } = await supabase
     .from('engagement_members')
-    .insert({ engagement_id: engagementId, user_id: profile.id });
+    .insert({ engagement_id: engagementId, user_id: profile.id, phase: role === 'prometeia' ? null : role });
   if (error) {
     if (error.code === '23505') return { ok: false, message: `${email} is already a member.` };
     throw error;
@@ -153,11 +153,13 @@ export type Member = { userId: string; email: string; fullName: string | null };
 export async function listMembers(engagementId: string, role: MemberRole): Promise<Member[]> {
   await requireProm();
   const supabase = createServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('engagement_members')
     .select('user_id, profiles!inner(email, full_name, is_prometeia)')
     .eq('engagement_id', engagementId)
     .eq('profiles.is_prometeia', role === 'prometeia');
+  if (role !== 'prometeia') query = query.eq('phase', role);
+  const { data, error } = await query;
   if (error) throw error;
   return (
     data as unknown as { user_id: string; profiles: { email: string; full_name: string | null } }[]
