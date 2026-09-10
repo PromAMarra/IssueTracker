@@ -21,7 +21,7 @@ export function PriorityDistributionChart({ distribution }: { distribution: Reco
     <div className="rounded-lg bg-white p-4 shadow-sm">
       <h3 className="mb-3 text-sm font-semibold text-ink">Issues by priority</h3>
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />
           <XAxis
             dataKey="label"
@@ -29,7 +29,13 @@ export function PriorityDistributionChart({ distribution }: { distribution: Reco
             axisLine={{ stroke: '#C3C2B7' }}
             tickLine={false}
           />
-          <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#565F78' }} axisLine={false} tickLine={false} />
+          <YAxis
+            allowDecimals={false}
+            domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) || 1]}
+            tick={{ fontSize: 12, fill: '#565F78' }}
+            axisLine={false}
+            tickLine={false}
+          />
           <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
           <Bar dataKey="count" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 12, fill: '#12213F' }}>
             {data.map((entry) => (

@@ -19,7 +19,7 @@ export function TimeToCloseChart({ rows }: { rows: TimeToCloseRow[] }) {
         Average days to close, by priority. Red means the average missed the SLA target.
       </p>
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />
           <XAxis
             dataKey="label"
@@ -29,6 +29,7 @@ export function TimeToCloseChart({ rows }: { rows: TimeToCloseRow[] }) {
           />
           <YAxis
             allowDecimals={false}
+            domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) || 1]}
             tick={{ fontSize: 12, fill: '#565F78' }}
             axisLine={false}
             tickLine={false}

@@ -195,7 +195,8 @@ describe('dailyDefects', () => {
       // open on day 2
       issue({ id: 'c', created_at: '2026-02-02T12:00:00.000Z', status: 'backlog' }),
     ];
-    const buckets = dailyDefects(issues, '2026-02-01', '2026-02-03');
+    const now = new Date('2026-02-10T00:00:00.000Z'); // well after the whole range — nothing to cap here
+    const buckets = dailyDefects(issues, '2026-02-01', '2026-02-03', now);
     expect(buckets.map((b) => b.date)).toEqual(['2026-02-01', '2026-02-02', '2026-02-03']);
 
     expect(buckets[0]).toEqual({ date: '2026-02-01', opened: 2, closed: 0, liveDefects: 2 });
@@ -205,7 +206,15 @@ describe('dailyDefects', () => {
   });
 
   it('returns an empty array when the range is empty or inverted', () => {
-    expect(dailyDefects([], '2026-02-05', '2026-02-01')).toEqual([]);
+    expect(dailyDefects([], '2026-02-05', '2026-02-01', new Date('2026-02-10T00:00:00.000Z'))).toEqual([]);
+  });
+
+  it('caps the range at "now" instead of projecting the live-defects line into the future', () => {
+    const issues = [issue({ id: 'a', created_at: '2026-02-01T00:00:00.000Z', status: 'ongoing' })];
+    const now = new Date('2026-02-03T00:00:00.000Z');
+    // configured period runs through 02-10, but only up to "now" has happened
+    const buckets = dailyDefects(issues, '2026-02-01', '2026-02-10', now);
+    expect(buckets.map((b) => b.date)).toEqual(['2026-02-01', '2026-02-02', '2026-02-03']);
   });
 });
 

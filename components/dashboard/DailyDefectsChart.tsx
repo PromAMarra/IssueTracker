@@ -38,7 +38,7 @@ export function DailyDefectsChart({
 
   const data = useMemo(() => {
     if (!period) return [];
-    return dailyDefects(issues, period.start, period.end).map((b) => ({ ...b, openedNeg: -b.opened }));
+    return dailyDefects(issues, period.start, period.end, new Date()).map((b) => ({ ...b, openedNeg: -b.opened }));
   }, [issues, period]);
 
   if (!sitPeriod && !uatPeriod) {

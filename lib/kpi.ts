@@ -123,13 +123,18 @@ export function throughputByWeek(issues: Issue[], weeks: number, now: Date): Thr
 
 export type DailyDefectBucket = { date: string; opened: number; closed: number; liveDefects: number };
 
-// One row per calendar day in [startDate, endDate] (inclusive, "YYYY-MM-DD").
+// One row per calendar day in [startDate, endDate] (inclusive, "YYYY-MM-DD"),
+// capped at "now" — a configured period can extend into the future, and
+// there's no data yet for days that haven't happened, so plotting them would
+// just flatline the live-defects line instead of honestly stopping.
 // liveDefects is a historical snapshot — issues created on/before that day
 // and not yet closed as of the end of that day — not just today's open count.
-export function dailyDefects(issues: Issue[], startDate: string, endDate: string): DailyDefectBucket[] {
+export function dailyDefects(issues: Issue[], startDate: string, endDate: string, now: Date): DailyDefectBucket[] {
   const days: string[] = [];
   const cursor = new Date(`${startDate}T00:00:00.000Z`);
-  const end = new Date(`${endDate}T00:00:00.000Z`);
+  const todayStr = now.toISOString().slice(0, 10);
+  const cappedEndDate = endDate < todayStr ? endDate : todayStr;
+  const end = new Date(`${cappedEndDate}T00:00:00.000Z`);
   while (cursor <= end) {
     days.push(cursor.toISOString().slice(0, 10));
     cursor.setUTCDate(cursor.getUTCDate() + 1);

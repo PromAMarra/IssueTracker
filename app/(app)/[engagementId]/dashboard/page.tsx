@@ -76,8 +76,8 @@ export default async function DashboardPage({
     engagement.uat_start_date && engagement.uat_end_date
       ? { start: engagement.uat_start_date, end: engagement.uat_end_date }
       : null;
-  const sitDaily = sitPeriod ? dailyDefects(issues, sitPeriod.start, sitPeriod.end) : [];
-  const uatDaily = uatPeriod ? dailyDefects(issues, uatPeriod.start, uatPeriod.end) : [];
+  const sitDaily = sitPeriod ? dailyDefects(issues, sitPeriod.start, sitPeriod.end, now) : [];
+  const uatDaily = uatPeriod ? dailyDefects(issues, uatPeriod.start, uatPeriod.end, now) : [];
 
   const phaseLink = (value: 'sit' | 'uat' | null) => (value ? `?phase=${value}` : '?');
   const phaseClass = (value: 'sit' | 'uat' | null) =>
