@@ -1,7 +1,7 @@
 'use client';
 
 import { downloadWorkbook } from '@/lib/exportXlsx';
-import type { AgingRow, DailyDefectBucket, ThroughputBucket, TimeToCloseRow } from '@/lib/kpi';
+import type { AgingRow, DailyDefectBucket, ThroughputBucket, TimeInStatusRow, TimeToCloseRow } from '@/lib/kpi';
 import type { Org, Priority, Status } from '@/lib/types';
 
 export function ExportDashboardButton({
@@ -9,6 +9,7 @@ export function ExportDashboardButton({
   statusDist,
   priorityDist,
   timeToClose,
+  timeInStatus,
   throughput,
   aging,
   moduleVol,
@@ -20,6 +21,7 @@ export function ExportDashboardButton({
   statusDist: Record<Status, number>;
   priorityDist: Record<Priority, number>;
   timeToClose: TimeToCloseRow[];
+  timeInStatus: TimeInStatusRow[];
   throughput: ThroughputBucket[];
   aging: AgingRow[];
   moduleVol: { module: string; count: number }[];
@@ -53,6 +55,16 @@ export function ExportDashboardButton({
             'Median days to close': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
             'SLA target (days)': r.targetDays,
             'Breach count': r.breachCount,
+          })),
+        },
+        {
+          name: 'Time in Status',
+          rows: timeInStatus.map((r) => ({
+            Priority: r.priority,
+            Status: r.status,
+            'Avg days': r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : '',
+            'Median days': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
+            'Issue count': r.count,
           })),
         },
         {

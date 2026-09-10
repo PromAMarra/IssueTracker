@@ -12,12 +12,14 @@ import {
   reopenRate,
   statusDistribution,
   throughputByWeek,
+  timeInStatusByPriority,
   timeToCloseByPriority,
 } from '@/lib/kpi';
 import { StatTile } from '@/components/dashboard/StatTile';
 import { StatusDistributionChart } from '@/components/dashboard/StatusDistributionChart';
 import { PriorityDistributionChart } from '@/components/dashboard/PriorityDistributionChart';
 import { TimeToCloseChart } from '@/components/dashboard/TimeToCloseChart';
+import { TimeInStatusTable } from '@/components/dashboard/TimeInStatusTable';
 import { ThroughputChart } from '@/components/dashboard/ThroughputChart';
 import { DailyDefectsChart } from '@/components/dashboard/DailyDefectsChart';
 import { AgingReportTable } from '@/components/dashboard/AgingReportTable';
@@ -64,6 +66,7 @@ export default async function DashboardPage({
   const moduleVol = moduleVolume(issues);
   const orgVol = orgVolume(issues);
   const aging = agingReport(issues, engagement.sla_days, now);
+  const timeInStatus = timeInStatusByPriority(issues, history, now);
 
   const sitPeriod =
     engagement.sit_start_date && engagement.sit_end_date
@@ -102,6 +105,7 @@ export default async function DashboardPage({
             statusDist={statusDist}
             priorityDist={priorityDist}
             timeToClose={timeToClose}
+            timeInStatus={timeInStatus}
             throughput={throughput}
             aging={aging}
             moduleVol={moduleVol}
@@ -129,6 +133,7 @@ export default async function DashboardPage({
           <PriorityDistributionChart distribution={priorityDist} />
         </div>
         <TimeToCloseChart rows={timeToClose} />
+        <TimeInStatusTable rows={timeInStatus} />
         <ThroughputChart buckets={throughput} />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <ModuleVolumeChart data={moduleVol} />

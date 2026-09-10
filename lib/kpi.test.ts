@@ -7,7 +7,9 @@ import {
   priorityDistribution,
   reopenRate,
   statusDistribution,
+  statusDurations,
   throughputByWeek,
+  timeInStatusByPriority,
   timeToCloseByPriority,
 } from './kpi';
 import type { Issue, IssueHistoryEntry, SlaDays } from './types';
@@ -203,6 +205,97 @@ describe('dailyDefects', () => {
 
   it('returns an empty array when the range is empty or inverted', () => {
     expect(dailyDefects([], '2026-02-05', '2026-02-01')).toEqual([]);
+  });
+});
+
+describe('statusDurations', () => {
+  it('sums time in each status, using fromValue chains so a generic "reopened" to_value never matters', () => {
+    const closedIssue = issue({ id: 'a', status: 'closed', created_at: '2026-01-01T00:00:00.000Z' });
+    const history = [
+      { field: 'status', fromValue: 'backlog', changedAt: '2026-01-02T00:00:00.000Z' },
+      { field: 'status', fromValue: 'ongoing', changedAt: '2026-01-04T00:00:00.000Z' },
+      // this event represents a reopen — its real to_value is 'reopened' in
+      // the DB, but that's irrelevant here since only fromValue is read
+      { field: 'status', fromValue: 'closed', changedAt: '2026-01-05T00:00:00.000Z' },
+      { field: 'status', fromValue: 'ongoing', changedAt: '2026-01-07T00:00:00.000Z' },
+    ];
+    const now = new Date('2026-01-09T00:00:00.000Z');
+    const totals = statusDurations(closedIssue, history, now);
+    expect(totals.backlog).toBe(1);
+    expect(totals.ongoing).toBe(4);
+    expect(totals.closed).toBe(3);
+    expect(totals.ready_for_test).toBe(0);
+    expect(totals.rejected).toBe(0);
+  });
+
+  it('attributes all elapsed time to the current status when there is no history', () => {
+    const now = new Date('2026-01-04T00:00:00.000Z');
+    const totals = statusDurations(
+      issue({ id: 'a', status: 'ongoing', created_at: '2026-01-01T00:00:00.000Z' }),
+      [],
+      now,
+    );
+    expect(totals.ongoing).toBe(3);
+    expect(totals.backlog).toBe(0);
+  });
+
+  it('ignores history entries for other fields', () => {
+    const now = new Date('2026-01-02T00:00:00.000Z');
+    const totals = statusDurations(
+      issue({ id: 'a', status: 'backlog', created_at: '2026-01-01T00:00:00.000Z' }),
+      [{ field: 'priority', fromValue: 'high', changedAt: '2026-01-01T12:00:00.000Z' }],
+      now,
+    );
+    expect(totals.backlog).toBe(1);
+  });
+});
+
+describe('timeInStatusByPriority', () => {
+  it('only averages a status across issues that actually passed through it', () => {
+    const now = new Date('2026-01-10T00:00:00.000Z');
+    const issues = [
+      // passed through ready_for_test for 2 days before closing
+      issue({ id: 'a', priority: 'high', status: 'closed', created_at: '2026-01-01T00:00:00.000Z' }),
+      // never reached ready_for_test — went straight backlog -> closed
+      issue({ id: 'b', priority: 'high', status: 'closed', created_at: '2026-01-01T00:00:00.000Z' }),
+    ];
+    const history: IssueHistoryEntry[] = [
+      {
+        id: 'h1',
+        issue_id: 'a',
+        field: 'status',
+        from_value: 'backlog',
+        to_value: 'ready_for_test',
+        changed_by: 'u1',
+        changed_at: '2026-01-02T00:00:00.000Z',
+      },
+      {
+        id: 'h2',
+        issue_id: 'a',
+        field: 'status',
+        from_value: 'ready_for_test',
+        to_value: 'closed',
+        changed_by: 'u1',
+        changed_at: '2026-01-04T00:00:00.000Z',
+      },
+      {
+        id: 'h3',
+        issue_id: 'b',
+        field: 'status',
+        from_value: 'backlog',
+        to_value: 'closed',
+        changed_by: 'u1',
+        changed_at: '2026-01-03T00:00:00.000Z',
+      },
+    ];
+    const rows = timeInStatusByPriority(issues, history, now);
+    const readyForTest = rows.find((r) => r.priority === 'high' && r.status === 'ready_for_test')!;
+    expect(readyForTest.count).toBe(1);
+    expect(readyForTest.avgDays).toBe(2);
+
+    const backlog = rows.find((r) => r.priority === 'high' && r.status === 'backlog')!;
+    expect(backlog.count).toBe(2);
+    expect(backlog.avgDays).toBeCloseTo((1 + 2) / 2, 5);
   });
 });
 

@@ -157,6 +157,70 @@ export function dailyDefects(issues: Issue[], startDate: string, endDate: string
   });
 }
 
+export type StatusHistoryEvent = { field: string; fromValue: string | null; changedAt: string };
+
+// Total days an issue has spent in each status across its whole lifecycle
+// (summed across every visit, if it was reopened more than once). Only
+// `field === 'status'` events matter; `fromValue` is always the real status
+// the issue was leaving (even for a "reopened" event, whose to_value is the
+// generic label 'reopened' rather than the actual target status) — reading
+// the NEXT segment's fromValue instead of this one's to_value is what makes
+// this correct without needing to know what "reopened" resolved to.
+export function statusDurations(issue: Issue, history: StatusHistoryEvent[], now: Date): Record<Status, number> {
+  const totals = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
+  const statusEvents = history
+    .filter((h): h is StatusHistoryEvent & { fromValue: string } => h.field === 'status' && !!h.fromValue)
+    .sort((a, b) => a.changedAt.localeCompare(b.changedAt));
+
+  let segmentStart = issue.created_at;
+  for (const h of statusEvents) {
+    totals[h.fromValue as Status] += daysBetween(segmentStart, h.changedAt);
+    segmentStart = h.changedAt;
+  }
+  totals[issue.status] += daysBetween(segmentStart, now.toISOString());
+  return totals;
+}
+
+export type TimeInStatusRow = {
+  priority: Priority;
+  status: Status;
+  avgDays: number | null;
+  medianDays: number | null;
+  count: number;
+};
+
+// Average/median time spent in each status, broken down by priority. Only
+// issues that actually passed through a given status count toward its
+// average — an issue that skipped "Ready for Test" entirely shouldn't drag
+// that status's average toward zero.
+export function timeInStatusByPriority(issues: Issue[], history: IssueHistoryEntry[], now: Date): TimeInStatusRow[] {
+  const historyByIssue = new Map<string, StatusHistoryEvent[]>();
+  for (const h of history) {
+    if (h.field !== 'status') continue;
+    const list = historyByIssue.get(h.issue_id) ?? [];
+    list.push({ field: h.field, fromValue: h.from_value, changedAt: h.changed_at });
+    historyByIssue.set(h.issue_id, list);
+  }
+
+  const rows: TimeInStatusRow[] = [];
+  for (const priority of PRIORITIES) {
+    const priorityIssues = issues.filter((i) => i.priority === priority);
+    for (const status of STATUSES) {
+      const durations = priorityIssues
+        .map((issue) => statusDurations(issue, historyByIssue.get(issue.id) ?? [], now)[status])
+        .filter((d) => d > 0);
+      rows.push({
+        priority,
+        status,
+        avgDays: durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : null,
+        medianDays: durations.length ? median(durations) : null,
+        count: durations.length,
+      });
+    }
+  }
+  return rows;
+}
+
 export type ReopenRateResult = { everClosedCount: number; reopenedCount: number; ratePercent: number };
 
 export function reopenRate(issues: Issue[], history: IssueHistoryEntry[]): ReopenRateResult {

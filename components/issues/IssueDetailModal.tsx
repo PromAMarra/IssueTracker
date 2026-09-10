@@ -14,9 +14,18 @@ import {
 } from '@/app/actions/issues';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
+import { statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
 import type { TeamMember } from '@/lib/data/engagements';
+
+const STATUS_LABELS: Record<Status, string> = {
+  backlog: 'Backlog',
+  ongoing: 'Ongoing',
+  ready_for_test: 'Ready for Test',
+  closed: 'Closed',
+  rejected: 'Rejected',
+};
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
@@ -134,6 +143,7 @@ export function IssueDetailModal({
   }
 
   const { issue, reporterName, assigneeName, comments, history, attachments } = detail;
+  const durations = statusDurations(issue, history, new Date());
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
@@ -342,6 +352,18 @@ export function IssueDetailModal({
               />
             </label>
           </form>
+        </section>
+
+        <section className="mb-6">
+          <h3 className="mb-2 text-sm font-semibold text-ink">Time in status</h3>
+          <ul className="flex flex-col gap-1 text-sm">
+            {STATUSES.map((s) => (
+              <li key={s} className="flex justify-between">
+                <span className="text-ink-soft">{STATUS_LABELS[s]}</span>
+                <span className="font-mono text-ink">{durations[s] > 0 ? `${durations[s].toFixed(1)}d` : '—'}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section>
