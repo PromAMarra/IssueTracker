@@ -5,6 +5,7 @@ import {
   moduleVolume,
   orgVolume,
   priorityDistribution,
+  reopenFromReadyForTestCount,
   reopenRate,
   statusDistribution,
   statusDurations,
@@ -247,6 +248,29 @@ describe('statusDurations', () => {
       now,
     );
     expect(totals.backlog).toBe(1);
+  });
+});
+
+describe('reopenFromReadyForTestCount', () => {
+  it('counts leaving Ready for Test for Ongoing or Backlog, not the success paths', () => {
+    const history = [
+      { field: 'status', fromValue: 'backlog', toValue: 'ready_for_test' },
+      { field: 'status', fromValue: 'ready_for_test', toValue: 'ongoing' }, // bounced back once
+      { field: 'status', fromValue: 'ongoing', toValue: 'ready_for_test' },
+      { field: 'status', fromValue: 'ready_for_test', toValue: 'backlog' }, // bounced back twice
+      { field: 'status', fromValue: 'backlog', toValue: 'ready_for_test' },
+      { field: 'status', fromValue: 'ready_for_test', toValue: 'closed' }, // success — not a bounce
+    ];
+    expect(reopenFromReadyForTestCount(history)).toBe(2);
+  });
+
+  it('ignores non-status fields and tickets that never reached Ready for Test', () => {
+    const history = [
+      { field: 'priority', fromValue: 'medium', toValue: 'high' },
+      { field: 'status', fromValue: 'backlog', toValue: 'ongoing' },
+      { field: 'status', fromValue: 'ongoing', toValue: 'closed' },
+    ];
+    expect(reopenFromReadyForTestCount(history)).toBe(0);
   });
 });
 

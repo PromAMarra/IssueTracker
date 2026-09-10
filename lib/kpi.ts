@@ -181,6 +181,19 @@ export function statusDurations(issue: Issue, history: StatusHistoryEvent[], now
   return totals;
 }
 
+export type StatusTransitionEvent = { field: string; fromValue: string | null; toValue: string };
+
+// How many times this ticket was sent back to active work after Prometeia
+// had marked it Ready for Test — i.e. the bank tested it, it wasn't actually
+// fixed, and it bounced back rather than being closed. Only counts leaving
+// Ready for Test for Ongoing or Backlog, not the success paths (Closed/
+// Rejected).
+export function reopenFromReadyForTestCount(history: StatusTransitionEvent[]): number {
+  return history.filter(
+    (h) => h.field === 'status' && h.fromValue === 'ready_for_test' && (h.toValue === 'ongoing' || h.toValue === 'backlog'),
+  ).length;
+}
+
 export type TimeInStatusRow = {
   priority: Priority;
   status: Status;

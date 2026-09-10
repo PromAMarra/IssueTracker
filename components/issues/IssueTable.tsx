@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { updateIssueAssignee, updateIssueModule, updateIssuePriority } from '@/app/actions/issues';
-import { statusDurations } from '@/lib/kpi';
+import { reopenFromReadyForTestCount, statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { IssueHistoryEntry, Org, Priority, Status } from '@/lib/types';
 import type { IssueWithNames } from '@/lib/data/issues';
@@ -50,7 +50,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'closed_at', label: 'Closed' },
 ];
 
-const TOTAL_COLUMNS = COLUMNS.length + STATUSES.length;
+const TOTAL_COLUMNS = COLUMNS.length + STATUSES.length + 1;
 
 function formatDate(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString('en-GB') : '—';
@@ -83,20 +83,26 @@ export function IssueTable({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const durationsById = useMemo(() => {
-    const historyByIssue = new Map<string, { field: string; fromValue: string | null; changedAt: string }[]>();
+  const { durationsById, reopenCountById } = useMemo(() => {
+    const historyByIssue = new Map<
+      string,
+      { field: string; fromValue: string | null; toValue: string; changedAt: string }[]
+    >();
     for (const h of history) {
       if (h.field !== 'status') continue;
       const list = historyByIssue.get(h.issue_id) ?? [];
-      list.push({ field: h.field, fromValue: h.from_value, changedAt: h.changed_at });
+      list.push({ field: h.field, fromValue: h.from_value, toValue: h.to_value, changedAt: h.changed_at });
       historyByIssue.set(h.issue_id, list);
     }
     const now = new Date();
-    const map = new Map<string, Record<Status, number>>();
+    const durations = new Map<string, Record<Status, number>>();
+    const reopenCounts = new Map<string, number>();
     for (const issue of issues) {
-      map.set(issue.id, statusDurations(issue, historyByIssue.get(issue.id) ?? [], now));
+      const issueHistory = historyByIssue.get(issue.id) ?? [];
+      durations.set(issue.id, statusDurations(issue, issueHistory, now));
+      reopenCounts.set(issue.id, reopenFromReadyForTestCount(issueHistory));
     }
-    return map;
+    return { durationsById: durations, reopenCountById: reopenCounts };
   }, [issues, history]);
 
   const rows = useMemo(() => {
@@ -155,6 +161,7 @@ export function IssueTable({
               'Last updated': new Date(issue.updated_at).toLocaleDateString(),
               Closed: issue.closed_at ? new Date(issue.closed_at).toLocaleDateString() : '',
               ...durationCols,
+              'Reopened from RFT': reopenCountById.get(issue.id) ?? 0,
             };
           }),
         },
@@ -242,6 +249,9 @@ export function IssueTable({
                   Time in {STATUS_LABELS[s]}
                 </th>
               ))}
+              <th className="whitespace-nowrap px-3 py-2" title="Times sent back to Ongoing/Backlog after Prometeia marked it Ready for Test">
+                Reopened from RFT
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -336,6 +346,9 @@ export function IssueTable({
                     </td>
                   );
                 })}
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
+                  {reopenCountById.get(issue.id) ?? 0}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
