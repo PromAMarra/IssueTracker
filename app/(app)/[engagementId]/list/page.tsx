@@ -24,7 +24,12 @@ export default async function ListPage({
 
   return (
     <>
-      <IssueTable issues={issues} modules={engagement.modules} />
+      <IssueTable
+        issues={issues}
+        modules={engagement.modules}
+        teamMembers={teamMembers}
+        isProm={session.profile.is_prometeia}
+      />
       {searchParams.issue && (
         <IssueDetailModal
           issueId={searchParams.issue}

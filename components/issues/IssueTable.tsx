@@ -1,12 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
+import { updateIssueAssignee, updateIssueModule, updateIssuePriority } from '@/app/actions/issues';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Org, Priority, Status } from '@/lib/types';
 import type { IssueWithNames } from '@/lib/data/issues';
+import type { TeamMember } from '@/lib/data/engagements';
 import { downloadWorkbook } from '@/lib/exportXlsx';
 
 type SortKey =
@@ -18,7 +21,9 @@ type SortKey =
   | 'assigneeName'
   | 'reporterName'
   | 'org'
-  | 'created_at';
+  | 'created_at'
+  | 'updated_at'
+  | 'closed_at';
 
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
@@ -40,15 +45,34 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'reporterName', label: 'Reporter' },
   { key: 'org', label: 'Raised by' },
   { key: 'created_at', label: 'Opened' },
+  { key: 'updated_at', label: 'Last updated' },
+  { key: 'closed_at', label: 'Closed' },
 ];
 
-export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modules: string[] }) {
+function formatDate(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString('en-GB') : '—';
+}
+
+export function IssueTable({
+  issues,
+  modules,
+  teamMembers,
+  isProm,
+}: {
+  issues: IssueWithNames[];
+  modules: string[];
+  teamMembers: TeamMember[];
+  isProm: boolean;
+}) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [moduleFilter, setModuleFilter] = useState('');
   const [orgFilter, setOrgFilter] = useState<Org | ''>('');
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     let result = issues;
@@ -70,6 +94,19 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
     }
   }
 
+  async function run(issueId: string, action: () => Promise<void>) {
+    setPendingId(issueId);
+    setError(null);
+    try {
+      await action();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this change.');
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   async function handleExport() {
     await downloadWorkbook(
       [
@@ -85,6 +122,8 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
             Reporter: issue.reporterName,
             'Raised by': ORG_LABELS[issue.org],
             Opened: new Date(issue.created_at).toLocaleDateString(),
+            'Last updated': new Date(issue.updated_at).toLocaleDateString(),
+            Closed: issue.closed_at ? new Date(issue.closed_at).toLocaleDateString() : '',
           })),
         },
       ],
@@ -151,6 +190,7 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
           Export to Excel
         </button>
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead>
@@ -180,14 +220,76 @@ export function IssueTable({ issues, modules }: { issues: IssueWithNames[]; modu
                   <StatusBadge status={issue.status} />
                 </td>
                 <td className="px-3 py-2">
-                  <PriorityBadge priority={issue.priority} />
+                  {isProm ? (
+                    <select
+                      value={issue.priority}
+                      disabled={pendingId === issue.id}
+                      onChange={(e) =>
+                        run(issue.id, () => updateIssuePriority(issue.id, e.target.value as Priority))
+                      }
+                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs capitalize"
+                    >
+                      {PRIORITIES.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <PriorityBadge priority={issue.priority} />
+                  )}
                 </td>
-                <td className="px-3 py-2 text-ink-soft">{issue.module ?? 'Unassigned'}</td>
-                <td className="px-3 py-2 text-ink-soft">{issue.assigneeName ?? '—'}</td>
+                <td className="px-3 py-2 text-ink-soft">
+                  {isProm ? (
+                    <select
+                      value={issue.module ?? ''}
+                      disabled={pendingId === issue.id}
+                      onChange={(e) => run(issue.id, () => updateIssueModule(issue.id, e.target.value || null))}
+                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
+                    >
+                      <option value="">No module</option>
+                      {modules.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    (issue.module ?? 'Unassigned')
+                  )}
+                </td>
+                <td className="px-3 py-2 text-ink-soft">
+                  {isProm ? (
+                    <select
+                      value={issue.assignee_id ?? ''}
+                      disabled={pendingId === issue.id}
+                      onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
+                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
+                    >
+                      <option value="">Unassigned</option>
+                      {teamMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                      {!teamMembers.some((m) => m.id === issue.reporter_id) && (
+                        <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
+                      )}
+                    </select>
+                  ) : (
+                    (issue.assigneeName ?? '—')
+                  )}
+                </td>
                 <td className="px-3 py-2 text-ink-soft">{issue.reporterName}</td>
                 <td className="px-3 py-2 text-ink-soft">{ORG_LABELS[issue.org]}</td>
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
-                  {new Date(issue.created_at).toLocaleDateString('en-GB')}
+                  {formatDate(issue.created_at)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
+                  {formatDate(issue.updated_at)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">
+                  {formatDate(issue.closed_at)}
                 </td>
               </tr>
             ))}

@@ -17,6 +17,7 @@ export type Issue = {
   reporter_id: string;
   assignee_id: string | null;
   created_at: string;
+  updated_at: string;
   closed_at: string | null;
 };
 
