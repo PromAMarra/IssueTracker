@@ -1,7 +1,7 @@
-# UAT Tracker
+# Forge
 
-A UAT issue tracker for Prometeia and its bank clients: report issues, track them
-through a status workflow, and monitor KPIs on a BI dashboard. See
+A UAT/SIT issue tracker for Prometeia and its bank clients: report issues, track
+them through a status workflow, and monitor KPIs on a BI dashboard. See
 `docs/superpowers/specs/2026-09-05-uat-tracker-design.md` for the full design.
 
 ## One-time setup
