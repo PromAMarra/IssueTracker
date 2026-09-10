@@ -110,7 +110,7 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
     .from('issues')
-    .select('status, engagement_id')
+    .select('status, engagement_id, reporter_id, assignee_id')
     .eq('id', issueId)
     .single();
   if (fetchError) throw fetchError;
@@ -118,15 +118,28 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   const isReopen =
     current.status === 'closed' &&
     (newStatus === 'ongoing' || newStatus === 'backlog' || newStatus === 'ready_for_test');
+  const isClosing = newStatus === 'closed';
   const patch: Record<string, unknown> = {
     status: newStatus,
-    closed_at: newStatus === 'closed' ? new Date().toISOString() : null,
+    closed_at: isClosing ? new Date().toISOString() : null,
   };
+  // Hand a closed ticket straight back to whoever reported it, so it's clear
+  // who needs to verify the fix — the same "back to reporter" move Prometeia
+  // could already do manually, just automatic now.
+  if (isClosing) patch.assignee_id = current.reporter_id;
 
   const { error } = await supabase.from('issues').update(patch).eq('id', issueId);
   if (error) throw error;
 
   await recordHistory(supabase, issueId, 'status', current.status, isReopen ? 'reopened' : newStatus, session.id);
+
+  if (isClosing && current.assignee_id !== current.reporter_id) {
+    const [fromName, toName] = await Promise.all([
+      profileName(supabase, current.assignee_id),
+      profileName(supabase, current.reporter_id),
+    ]);
+    await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id);
+  }
 
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
