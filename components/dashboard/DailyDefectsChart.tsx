@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Bar,
   CartesianGrid,
@@ -30,13 +30,11 @@ export function DailyDefectsChart({
   issues: Issue[];
   sitPeriod: DateRange | null;
   uatPeriod: DateRange | null;
-  // When the page-level SIT/UAT filter is active, lock the chart to that
-  // same period instead of letting it pick its own independently.
+  // The page-level SIT/UAT filter (see the dashboard page) is the only
+  // control for which period this chart shows — no toggle of its own.
   forcedPhase?: 'sit' | 'uat' | null;
 }) {
-  const [selected, setSelected] = useState<'sit' | 'uat'>(sitPeriod ? 'sit' : 'uat');
-  const effectiveSelected = forcedPhase ?? selected;
-  const period = (effectiveSelected === 'sit' ? sitPeriod : uatPeriod) ?? sitPeriod ?? uatPeriod;
+  const period = (forcedPhase === 'sit' ? sitPeriod : forcedPhase === 'uat' ? uatPeriod : null) ?? sitPeriod ?? uatPeriod;
 
   const data = useMemo(() => {
     if (!period) return [];
@@ -56,33 +54,9 @@ export function DailyDefectsChart({
 
   return (
     <div className="rounded-lg bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-ink">
-          Daily defects{period ? ` (${formatDate(period.start)}–${formatDate(period.end)})` : ''}
-        </h3>
-        {!forcedPhase && sitPeriod && uatPeriod && (
-          <div className="flex gap-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setSelected('sit')}
-              className={`rounded px-2 py-1 font-medium ${
-                selected === 'sit' ? 'bg-brand-navy text-white' : 'text-ink-soft hover:bg-surface'
-              }`}
-            >
-              SIT
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected('uat')}
-              className={`rounded px-2 py-1 font-medium ${
-                selected === 'uat' ? 'bg-brand-navy text-white' : 'text-ink-soft hover:bg-surface'
-              }`}
-            >
-              UAT
-            </button>
-          </div>
-        )}
-      </div>
+      <h3 className="mb-3 text-sm font-semibold text-ink">
+        Daily defects{period ? ` (${formatDate(period.start)}–${formatDate(period.end)})` : ''}
+      </h3>
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />
