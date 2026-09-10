@@ -3,7 +3,7 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Org } from '@/lib/types';
 
-const COLORS: Record<Org, string> = { bank: '#159E52', sit: '#D97706', prometeia: '#000D4C' };
+const COLORS: Record<Org, string> = { bank: '#00DC78', sit: '#FF7D00', prometeia: '#000D4C' };
 const LABELS: Record<Org, string> = { bank: 'Bank (UAT)', sit: 'SIT (IVS)', prometeia: 'Prometeia' };
 
 export function OrgVolumeChart({ data }: { data: { org: Org; count: number }[] }) {

@@ -4,11 +4,11 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import type { Status } from '@/lib/types';
 
 const COLORS: Record<Status, string> = {
-  backlog: '#94A3B8',
-  ongoing: '#EDA100',
-  ready_for_test: '#1BAF7A',
-  closed: '#008300',
-  rejected: '#E34948',
+  backlog: '#5A646E',
+  ongoing: '#FF7D00',
+  ready_for_test: '#009895',
+  closed: '#00DC78',
+  rejected: '#FF0D21',
 };
 
 const LABELS: Record<Status, string> = {

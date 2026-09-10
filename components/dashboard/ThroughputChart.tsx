@@ -20,7 +20,7 @@ export function ThroughputChart({ buckets }: { buckets: ThroughputBucket[] }) {
           <Tooltip />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Line type="monotone" dataKey="opened" name="Opened" stroke="#0026FF" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="closed" name="Closed" stroke="#159E52" strokeWidth={2} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="closed" name="Closed" stroke="#00DC78" strokeWidth={2} dot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>

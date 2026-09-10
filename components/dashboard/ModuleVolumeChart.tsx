@@ -25,7 +25,7 @@ export function ModuleVolumeChart({ data }: { data: { module: string; count: num
             tickLine={false}
           />
           <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-          <Bar dataKey="count" fill="#2A78D6" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 12, fill: '#12213F' }} />
+          <Bar dataKey="count" fill="#0026FF" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 12, fill: '#12213F' }} />
         </BarChart>
       </ResponsiveContainer>
     </div>

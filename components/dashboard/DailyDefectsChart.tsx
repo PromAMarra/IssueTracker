@@ -74,13 +74,13 @@ export function DailyDefectsChart({
           <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#565F78' }} axisLine={false} tickLine={false} />
           <Tooltip labelFormatter={(v) => formatDate(String(v))} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="openedNeg" name="Defects new" fill="#DC2626" radius={[0, 0, 4, 4]} />
-          <Bar dataKey="closed" name="Defects closed" fill="#159E52" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="openedNeg" name="Defects new" fill="#FF0D21" radius={[0, 0, 4, 4]} />
+          <Bar dataKey="closed" name="Defects closed" fill="#00DC78" radius={[4, 4, 0, 0]} />
           <Line
             type="monotone"
             dataKey="liveDefects"
             name="Current live defects"
-            stroke="#D97706"
+            stroke="#FF7D00"
             strokeWidth={2}
             dot={false}
           />

@@ -44,7 +44,7 @@ export function TimeToCloseChart({ rows }: { rows: TimeToCloseRow[] }) {
             label={{ position: 'top', fontSize: 12, fill: '#12213F' }}
           >
             {data.map((entry) => (
-              <Cell key={entry.label} fill={entry.breached ? '#D03B3B' : '#159E52'} />
+              <Cell key={entry.label} fill={entry.breached ? '#FF0D21' : '#00DC78'} />
             ))}
           </Bar>
         </BarChart>
