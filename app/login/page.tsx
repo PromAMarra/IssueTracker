@@ -31,7 +31,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-xl font-semibold text-ink">Sign in</h1>
-        <p className="mb-6 text-sm text-ink-soft">Forge</p>
+        <p className="mb-6 text-sm text-ink-soft">Prometeia Issue Tracker</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 text-sm text-ink">
             <label htmlFor="login-email">Email</label>

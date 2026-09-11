@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Forge',
+  title: 'Prometeia Issue Tracker',
   description: "Prometeia's UAT/SIT issue tracking and KPI dashboard",
 };
 

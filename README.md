@@ -1,4 +1,4 @@
-# Forge
+# Prometeia Issue Tracker
 
 A UAT/SIT issue tracker for Prometeia and its bank clients: report issues, track
 them through a status workflow, and monitor KPIs on a BI dashboard. See
