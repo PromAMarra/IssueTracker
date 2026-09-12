@@ -186,13 +186,13 @@ export function IssueDetailModal({
 
         {isProm ? (
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
               Status
               <select
                 value={issue.status}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueStatus(issueId, e.target.value as Status))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -201,13 +201,13 @@ export function IssueDetailModal({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
               Priority
               <select
                 value={issue.priority}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssuePriority(issueId, e.target.value as Priority))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm capitalize"
+                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal capitalize"
               >
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>
@@ -216,13 +216,13 @@ export function IssueDetailModal({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
               Module
               <select
                 value={issue.module ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueModule(issueId, e.target.value || null))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 <option value="">No module</option>
                 {modules.map((m) => (
@@ -232,13 +232,13 @@ export function IssueDetailModal({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
               Assignee
               <select
                 value={issue.assignee_id ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueAssignee(issueId, e.target.value || null))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 <option value="">Unassigned</option>
                 {teamMembers.map((m) => (
@@ -341,14 +341,14 @@ export function IssueDetailModal({
                 Send
               </button>
             </div>
-            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
               Attach files or screenshots (optional)
               <input
                 ref={commentFileInputRef}
                 type="file"
                 multiple
                 onChange={(e) => setCommentFiles(e.target.files ? Array.from(e.target.files) : [])}
-                className="text-sm"
+                className="text-sm font-normal"
               />
             </label>
           </form>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
-import { updateIssueAssignee, updateIssueModule, updateIssuePriority } from '@/app/actions/issues';
+import { updateIssueAssignee, updateIssueModule, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
 import { reopenFromReadyForTestCount, statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { IssueHistoryEntry, Org, Priority, Status } from '@/lib/types';
@@ -264,7 +264,22 @@ export function IssueTable({
                   </Link>
                 </td>
                 <td className="px-3 py-2">
-                  <StatusBadge status={issue.status} />
+                  {isProm ? (
+                    <select
+                      value={issue.status}
+                      disabled={pendingId === issue.id}
+                      onChange={(e) => run(issue.id, () => updateIssueStatus(issue.id, e.target.value as Status))}
+                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_LABELS[s]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <StatusBadge status={issue.status} />
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   {isProm ? (

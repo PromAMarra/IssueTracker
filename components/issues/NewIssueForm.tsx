@@ -73,17 +73,17 @@ export function NewIssueForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm">
-      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
         Issue title
         <input
           required
           placeholder="Issue title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
         Description
         <textarea
           required
@@ -91,16 +91,16 @@ export function NewIssueForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
       <div className="flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
           Priority
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as Priority)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm capitalize text-ink"
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal capitalize text-ink"
           >
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -109,12 +109,12 @@ export function NewIssueForm({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
           Module
           <select
             value={module}
             onChange={(e) => setModule(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">No module</option>
             {modules.map((m) => (
@@ -124,12 +124,12 @@ export function NewIssueForm({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
           Test case package
           <select
             value={testCasePackage}
             onChange={(e) => setTestCasePackage(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">No test case package</option>
             {testCasePackages.map((p) => (
@@ -139,12 +139,12 @@ export function NewIssueForm({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
           Assign to (Prometeia)
           <select
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm text-ink"
+            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">Unassigned</option>
             {teamMembers.map((m) => (
@@ -155,24 +155,24 @@ export function NewIssueForm({
           </select>
         </label>
       </div>
-      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
         Test case step (optional)
         <textarea
           placeholder="Test case step (optional)"
           value={testCaseStep}
           onChange={(e) => setTestCaseStep(e.target.value)}
           rows={2}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink"
+          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-soft">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
         Attachments (optional — cannot be added after the ticket is reported)
         <input
           ref={fileInputRef}
           type="file"
           multiple
           onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
-          className="text-sm"
+          className="text-sm font-normal"
         />
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}

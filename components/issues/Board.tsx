@@ -80,48 +80,57 @@ export function Board({
                   </p>
                   {isProm ? (
                     <div className="flex flex-col gap-2">
-                      <select
-                        value={issue.status}
-                        disabled={pendingId === issue.id}
-                        onChange={(e) => run(issue.id, () => updateIssueStatus(issue.id, e.target.value as Status))}
-                        className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {COLUMN_LABELS[s]}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={issue.priority}
-                        disabled={pendingId === issue.id}
-                        onChange={(e) =>
-                          run(issue.id, () => updateIssuePriority(issue.id, e.target.value as Priority))
-                        }
-                        className="rounded border border-ink-soft/30 px-2 py-1 text-xs capitalize"
-                      >
-                        {PRIORITIES.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={issue.assignee_id ?? ''}
-                        disabled={pendingId === issue.id}
-                        onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
-                        className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
-                      >
-                        <option value="">Unassigned</option>
-                        {teamMembers.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                        {!teamMembers.some((m) => m.id === issue.reporter_id) && (
-                          <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
-                        )}
-                      </select>
+                      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
+                        Status
+                        <select
+                          value={issue.status}
+                          disabled={pendingId === issue.id}
+                          onChange={(e) => run(issue.id, () => updateIssueStatus(issue.id, e.target.value as Status))}
+                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {COLUMN_LABELS[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
+                        Priority
+                        <select
+                          value={issue.priority}
+                          disabled={pendingId === issue.id}
+                          onChange={(e) =>
+                            run(issue.id, () => updateIssuePriority(issue.id, e.target.value as Priority))
+                          }
+                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal capitalize"
+                        >
+                          {PRIORITIES.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
+                        Assignee
+                        <select
+                          value={issue.assignee_id ?? ''}
+                          disabled={pendingId === issue.id}
+                          onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
+                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                        >
+                          <option value="">Unassigned</option>
+                          {teamMembers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                          {!teamMembers.some((m) => m.id === issue.reporter_id) && (
+                            <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
+                          )}
+                        </select>
+                      </label>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
