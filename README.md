@@ -1,8 +1,134 @@
 # Prometeia Issue Tracker
 
-A UAT/SIT issue tracker for Prometeia and its bank clients: report issues, track
-them through a status workflow, and monitor KPIs on a BI dashboard. See
-`docs/superpowers/specs/2026-09-05-uat-tracker-design.md` for the full design.
+A web application for tracking defects found during System Integration Testing
+(SIT) and User Acceptance Testing (UAT) on Prometeia's bank engagements — used
+jointly by Prometeia, the bank's own testers, and (where applicable) a
+dedicated SIT team, with a live KPI dashboard for tracking progress.
+
+**Live demo:** https://issue-tracker-six-omega.vercel.app
+**Design spec:** `docs/superpowers/specs/2026-09-05-uat-tracker-design.md`
+
+---
+
+## What it does
+
+### Who uses it
+
+Every engagement has three kinds of participants, each with different access:
+
+| Role | Who | Can do |
+|---|---|---|
+| **Prometeia** | Prometeia's own team | Full control: create engagements, manage rosters, triage and update any ticket, configure settings |
+| **Bank** | The client bank's UAT testers | Report issues for their own engagement, comment, attach files — cannot change status/priority/module/assignee |
+| **SIT** | A dedicated system-integration test team, where one is engaged | Same reporting rights as Bank, tracked as a separate source so SIT-found vs. bank-found defects can be told apart |
+
+Every engagement is fully isolated: a bank account can only ever see the
+engagement(s) it has been explicitly added to, enforced at the database level
+(see [Security model](#security-model) below) — not just hidden in the UI.
+
+### Issue tracking
+
+- **Report an issue** with a title, description, priority (critical / high /
+  medium / low), module, an optional linked test case package/step, and file
+  attachments (screenshots, logs) — attachments can only be added at creation
+  time, keeping the audit trail of "what was actually reported" intact.
+- **Workflow**: `Backlog → Ongoing → Ready for Test → Closed`, with `Rejected`
+  as a terminal state for invalid reports. Only Prometeia can move a ticket
+  through the workflow or reassign it.
+- **Closing a ticket automatically hands it back to whoever reported it** —
+  so it's immediately clear who needs to verify the fix — and reopening a
+  closed ticket is tracked explicitly (a "Reopened from Ready for Test" count
+  appears per-ticket and feeds a dashboard metric), which surfaces tickets
+  that were marked fixed prematurely.
+- **Three views** of the same data: a **Kanban board** (grouped by status,
+  with inline status/priority/assignee editing for Prometeia), a **List**
+  (sortable, filterable table with inline editing and an Excel export), and
+  the **Dashboard** below.
+- **Full history** on every ticket: every field change is logged with who
+  changed it and when.
+- **Threaded comments**, visually color-coded by whether the author is from
+  Prometeia or the bank, with their own file attachments.
+- **In-app notifications** when a ticket is assigned to you, someone comments
+  on your ticket, or a ticket you reported changes status.
+
+### Dashboard & KPIs
+
+A BI-style dashboard per engagement, optionally scoped to a SIT or UAT testing
+window (each engagement can define separate SIT/UAT date ranges):
+
+- Status and priority distribution, module and reporting-org volume
+- **Time-to-close vs. SLA** by priority (SLA targets are configurable per
+  engagement, per priority) with breach counts
+- **Aging report** for everything still open
+- **Throughput** (opened vs. closed per week) and a **daily defects** trend
+  scoped to the active testing window
+- **Time-in-status** by priority (how long tickets actually sit in each
+  column) and an overall **reopen rate**
+- One-click export of the dashboard to **PDF** and the issue list to **Excel**
+
+### Configuration
+
+Each engagement is independently configurable by Prometeia: bank name and
+logo, custom ticket key prefix, the list of modules and test case packages
+issues can be filed against, per-priority SLA targets, and SIT/UAT testing
+date windows. Team rosters (Prometeia assignees, bank members, SIT members)
+are managed per engagement by adding a member's email.
+
+---
+
+## Technical overview
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 14](https://nextjs.org) (App Router), TypeScript (strict), Server Actions as the only mutation path — no separate REST/GraphQL API |
+| Styling | Tailwind CSS |
+| Database | PostgreSQL, via [Supabase](https://supabase.com) |
+| Auth | Supabase Auth (email + password) |
+| File storage | Supabase Storage — a private bucket for issue/comment attachments (served via short-lived signed URLs), a public bucket for bank/Prometeia logos |
+| Charts | Recharts |
+| Exports | SheetJS (`xlsx`) for Excel, jsPDF + html2canvas for PDF — both loaded on demand, not part of the base page bundle |
+| Tests | Vitest (unit tests over the KPI/export/session logic) |
+| Hosting (current) | [Vercel](https://vercel.com) |
+
+### Architecture
+
+```mermaid
+flowchart LR
+    Browser -->|HTTPS| MW[Next.js Middleware<br/>session refresh]
+    MW --> App[Next.js Server<br/>Server Components + Server Actions]
+    App -->|RLS-scoped queries| PG[(Postgres + Row Level Security)]
+    App --> Auth[Supabase Auth]
+    App --> Storage[Supabase Storage]
+```
+
+Server Components render every page directly from the database; every
+mutation (creating a ticket, changing its status, adding a comment) is a
+Server Action — there is no separate API layer to keep in sync.
+
+### Security model
+
+Access control is enforced by **Postgres Row Level Security (RLS)**, not
+application code. Every table's policies are evaluated by the database on
+every single query — a bug in the UI, or a request sent by hand bypassing the
+UI entirely, still cannot cross an engagement boundary. Two policy building
+blocks are reused everywhere:
+
+- `is_prometeia_user()` — true only for Prometeia accounts; grants full
+  access across every engagement.
+- `is_engagement_member(engagement_id)` — true for Prometeia (always), or for
+  a bank/SIT account explicitly added to that specific engagement's roster.
+
+The Supabase key shipped to the browser (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is
+not a trusted secret — it identifies the project, not the caller. Safety
+comes entirely from RLS evaluating who is actually asking on every query.
+`SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS, is never used anywhere in
+this codebase and should never be added to any environment.
+
+**Data sensitivity:** this system is scoped to support system testing only.
+It stores defect descriptions, screenshots, and test status — it does not
+hold production client data, account information, or anything regulated.
+
+---
 
 ## One-time setup
 
@@ -21,12 +147,9 @@ them through a status workflow, and monitor KPIs on a BI dashboard. See
 
 ### 2. Run the database migrations
 
-In the Supabase dashboard, go to **SQL Editor → New query**, and run these three
-files in order (paste each file's contents, click Run):
-
-1. `supabase/migrations/0001_schema.sql`
-2. `supabase/migrations/0002_rls.sql`
-3. `supabase/migrations/0003_storage.sql`
+In the Supabase dashboard, go to **SQL Editor → New query**, and run every
+file under `supabase/migrations/`, in filename order (paste each file's
+contents, click Run).
 
 ### 3. Install dependencies and run locally
 
@@ -55,7 +178,7 @@ Open http://localhost:3000 — it redirects to `/login`.
 ### 5. Deploy to Vercel
 
 1. Push this repository to a GitHub repo (already done —
-   https://github.com/PromAMarra/IssueTracker, branch `master`).
+   https://github.com/PromAMarra/IssueTracker, branch `main`).
 2. Go to https://vercel.com, create a free account, "Add New Project", import the
    GitHub repo.
 3. In the project's **Environment Variables** settings, add
