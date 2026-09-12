@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { retryAsync } from '@/lib/retryAsync';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,14 +16,29 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      setError(signInError.message);
+    try {
+      // On a dropped connection this throws instead of returning
+      // {error} — with no retry/catch, the button was left stuck on
+      // "Signing in…" forever with no feedback. Retry first; only show an
+      // error once retries are exhausted.
+      const { error: signInError } = await retryAsync(() =>
+        supabase.auth.signInWithPassword({ email, password }),
+      );
+      if (signInError) {
+        setLoading(false);
+        setError(signInError.message);
+        return;
+      }
+    } catch {
+      setLoading(false);
+      setError('Could not reach the server. Check your connection and try again.');
       return;
     }
-    router.push('/');
-    router.refresh();
+    // A client-side router.push()/refresh() here can be served from Next.js's
+    // own router cache instead of hitting the server, so middleware never gets
+    // a fresh request to see the just-set session cookie. A full navigation
+    // guarantees the server actually re-checks auth with the new cookie.
+    window.location.href = '/';
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { retryAsync } from '@/lib/retryAsync';
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -17,17 +18,24 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+    try {
+      const { error: signUpError } = await retryAsync(() =>
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } },
+        }),
+      );
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      setDone(true);
+    } catch {
+      setError('Could not reach the server. Check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
-    setDone(true);
   }
 
   if (done) {

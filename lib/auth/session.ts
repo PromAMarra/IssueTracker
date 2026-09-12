@@ -19,9 +19,16 @@ export type SessionUser = {
 // query per request instead of re-fetching the same thing 3+ times.
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    // All retries (handled inside fetchWithRetry) exhausted — fail closed
+    // (treated as signed out) rather than crashing the page.
+    return null;
+  }
   if (!user) return null;
 
   const { data: profile } = await supabase

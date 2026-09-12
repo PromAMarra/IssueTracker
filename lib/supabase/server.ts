@@ -1,5 +1,6 @@
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { fetchWithRetryNode } from './fetchWithRetryNode';
 
 export function createServerClient() {
   const cookieStore = cookies();
@@ -7,6 +8,7 @@ export function createServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: fetchWithRetryNode },
       cookies: {
         getAll() {
           return cookieStore.getAll();
