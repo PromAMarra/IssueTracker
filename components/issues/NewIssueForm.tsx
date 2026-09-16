@@ -179,7 +179,7 @@ export function NewIssueForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-fit rounded bg-brand-navy px-4 py-2 text-sm font-medium text-white hover:bg-brand-navy-2 disabled:opacity-60"
+        className="w-fit rounded bg-brand-blue px-4 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
       >
         {submitting ? 'Reporting…' : 'Report issue'}
       </button>
