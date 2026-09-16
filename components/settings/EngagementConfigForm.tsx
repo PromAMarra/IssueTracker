@@ -187,7 +187,7 @@ export function EngagementConfigForm({
       <button
         type="submit"
         disabled={saving}
-        className="w-fit rounded bg-brand-navy px-4 py-2 font-medium text-white hover:bg-brand-navy-2 disabled:opacity-60"
+        className="w-fit rounded bg-brand-blue px-4 py-2 font-bold text-white hover:bg-primary-active disabled:opacity-60"
       >
         {saving ? 'Saving…' : submitLabel}
       </button>

@@ -78,7 +78,7 @@ export function MemberManager({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-brand-navy px-3 py-2 text-sm font-medium text-white hover:bg-brand-navy-2 disabled:opacity-60"
+          className="rounded bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
         >
           Add
         </button>
