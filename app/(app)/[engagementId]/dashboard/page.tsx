@@ -81,7 +81,7 @@ export default async function DashboardPage({
 
   const phaseLink = (value: 'sit' | 'uat' | null) => (value ? `?phase=${value}` : '?');
   const phaseClass = (value: 'sit' | 'uat' | null) =>
-    `rounded px-3 py-1.5 text-sm font-medium ${
+    `rounded-md px-3 py-1.5 text-sm font-medium ${
       phase === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-white'
     }`;
 
