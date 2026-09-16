@@ -230,7 +230,7 @@ export function IssueTable({
         </button>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-lg border border-hairline bg-white">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-ink-soft/10 text-xs uppercase tracking-wide text-ink-soft">

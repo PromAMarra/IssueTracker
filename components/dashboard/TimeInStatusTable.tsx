@@ -13,7 +13,7 @@ export function TimeInStatusTable({ rows }: { rows: TimeInStatusRow[] }) {
   const byKey = new Map(rows.map((r) => [`${r.priority}:${r.status}`, r]));
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-hairline bg-white p-4">
       <h3 className="mb-1 text-sm font-semibold text-ink">Average time in status, by priority</h3>
       <p className="mb-3 text-xs text-ink-soft">
         Days spent in each status, summed across every visit if a ticket was reopened. Only tickets that actually

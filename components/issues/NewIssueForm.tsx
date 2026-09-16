@@ -72,7 +72,7 @@ export function NewIssueForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-hairline bg-white p-4">
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
         Issue title
         <input

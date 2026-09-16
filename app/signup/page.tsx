@@ -41,7 +41,7 @@ export default function SignupPage() {
   if (done) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-surface px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 text-center shadow-sm">
+        <div className="w-full max-w-sm rounded-lg border border-hairline bg-white p-8 text-center">
           <h1 className="mb-2 text-xl font-semibold text-ink">Check your email</h1>
           <p className="text-sm text-ink-soft">
             Confirm your address, then{' '}
@@ -58,7 +58,7 @@ export default function SignupPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-lg border border-hairline bg-white p-8">
         <h1 className="mb-1 text-xl font-semibold text-ink">Create an account</h1>
         <p className="mb-6 text-sm text-ink-soft">Prometeia Issue Tracker</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

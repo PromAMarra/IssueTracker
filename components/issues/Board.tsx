@@ -60,7 +60,7 @@ export function Board({
             {issues
               .filter((i) => i.status === status)
               .map((issue) => (
-                <div key={issue.id} className="rounded-lg bg-white p-3 shadow-sm">
+                <div key={issue.id} className="rounded-lg border border-hairline bg-white p-3">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="font-mono text-xs text-ink-soft">
                       {issue.key} · {new Date(issue.created_at).toLocaleDateString('en-GB')}

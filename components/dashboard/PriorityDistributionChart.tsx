@@ -18,7 +18,7 @@ export function PriorityDistributionChart({ distribution }: { distribution: Reco
   }));
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-hairline bg-white p-4">
       <h3 className="mb-3 text-sm font-semibold text-ink">Issues by priority</h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
