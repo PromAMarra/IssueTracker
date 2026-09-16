@@ -99,7 +99,7 @@ export function ExportDashboardButton({
     <button
       type="button"
       onClick={handleExport}
-      className="rounded border border-ink-soft/30 px-3 py-1.5 text-sm font-medium text-ink hover:bg-white"
+      className="rounded-md border border-ink-soft/30 px-3 py-1.5 text-sm font-medium text-ink hover:bg-white"
     >
       Export to Excel
     </button>

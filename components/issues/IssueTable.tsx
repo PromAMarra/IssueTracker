@@ -176,7 +176,7 @@ export function IssueTable({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as Status | '')}
-          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+          className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm"
         >
           <option value="">All statuses</option>
           {STATUSES.map((s) => (
@@ -188,7 +188,7 @@ export function IssueTable({
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
-          className="rounded border border-ink-soft/30 px-2 py-1 text-sm capitalize"
+          className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm capitalize"
         >
           <option value="">All priorities</option>
           {PRIORITIES.map((p) => (
@@ -200,7 +200,7 @@ export function IssueTable({
         <select
           value={moduleFilter}
           onChange={(e) => setModuleFilter(e.target.value)}
-          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+          className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm"
         >
           <option value="">All modules</option>
           {modules.map((m) => (
@@ -213,7 +213,7 @@ export function IssueTable({
         <select
           value={orgFilter}
           onChange={(e) => setOrgFilter(e.target.value as Org | '')}
-          className="rounded border border-ink-soft/30 px-2 py-1 text-sm"
+          className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm"
         >
           <option value="">Bank + SIT + Prometeia</option>
           <option value="bank">Bank</option>
@@ -224,7 +224,7 @@ export function IssueTable({
           type="button"
           onClick={handleExport}
           disabled={rows.length === 0}
-          className="ml-auto rounded border border-ink-soft/30 px-3 py-1 text-sm font-medium text-ink hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="ml-auto rounded-md border border-ink-soft/30 px-3 py-1 text-sm font-medium text-ink hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           Export to Excel
         </button>
@@ -269,7 +269,7 @@ export function IssueTable({
                       value={issue.status}
                       disabled={pendingId === issue.id}
                       onChange={(e) => run(issue.id, () => updateIssueStatus(issue.id, e.target.value as Status))}
-                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>
@@ -289,7 +289,7 @@ export function IssueTable({
                       onChange={(e) =>
                         run(issue.id, () => updateIssuePriority(issue.id, e.target.value as Priority))
                       }
-                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs capitalize"
+                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs capitalize"
                     >
                       {PRIORITIES.map((p) => (
                         <option key={p} value={p}>
@@ -307,7 +307,7 @@ export function IssueTable({
                       value={issue.module ?? ''}
                       disabled={pendingId === issue.id}
                       onChange={(e) => run(issue.id, () => updateIssueModule(issue.id, e.target.value || null))}
-                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
+                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs"
                     >
                       <option value="">No module</option>
                       {modules.map((m) => (
@@ -326,7 +326,7 @@ export function IssueTable({
                       value={issue.assignee_id ?? ''}
                       disabled={pendingId === issue.id}
                       onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
-                      className="rounded border border-ink-soft/30 px-2 py-1 text-xs"
+                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs"
                     >
                       <option value="">Unassigned</option>
                       {teamMembers.map((m) => (

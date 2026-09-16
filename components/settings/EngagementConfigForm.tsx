@@ -79,7 +79,7 @@ export function EngagementConfigForm({
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="rounded border border-ink-soft/30 px-3 py-2"
+          className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -88,7 +88,7 @@ export function EngagementConfigForm({
           required
           value={bankName}
           onChange={(e) => setBankName(e.target.value)}
-          className="rounded border border-ink-soft/30 px-3 py-2"
+          className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -97,7 +97,7 @@ export function EngagementConfigForm({
           value={keyPrefix}
           onChange={(e) => setKeyPrefix(e.target.value)}
           placeholder="e.g. ESUP (leave blank to auto-generate from the bank name)"
-          className="rounded border border-ink-soft/30 px-3 py-2 font-mono uppercase"
+          className="rounded-md border border-ink-soft/30 px-3 py-2 font-mono uppercase"
         />
         <span className="text-xs font-normal normal-case text-ink-soft">
           Only affects new tickets — existing ones keep their current IDs.
@@ -109,7 +109,7 @@ export function EngagementConfigForm({
           value={modules}
           onChange={(e) => setModules(e.target.value)}
           placeholder="Payments, Onboarding, Reporting"
-          className="rounded border border-ink-soft/30 px-3 py-2"
+          className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -118,7 +118,7 @@ export function EngagementConfigForm({
           value={testCasePackages}
           onChange={(e) => setTestCasePackages(e.target.value)}
           placeholder="Onboarding Suite, Payments Suite, Regression Pack"
-          className="rounded border border-ink-soft/30 px-3 py-2"
+          className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
       <fieldset className="flex flex-col gap-2">
@@ -133,7 +133,7 @@ export function EngagementConfigForm({
               type="date"
               value={sitStartDate}
               onChange={(e) => setSitStartDate(e.target.value)}
-              className="rounded border border-ink-soft/30 px-2 py-1"
+              className="rounded-md border border-ink-soft/30 px-2 py-1"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -142,7 +142,7 @@ export function EngagementConfigForm({
               type="date"
               value={sitEndDate}
               onChange={(e) => setSitEndDate(e.target.value)}
-              className="rounded border border-ink-soft/30 px-2 py-1"
+              className="rounded-md border border-ink-soft/30 px-2 py-1"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -151,7 +151,7 @@ export function EngagementConfigForm({
               type="date"
               value={uatStartDate}
               onChange={(e) => setUatStartDate(e.target.value)}
-              className="rounded border border-ink-soft/30 px-2 py-1"
+              className="rounded-md border border-ink-soft/30 px-2 py-1"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -160,7 +160,7 @@ export function EngagementConfigForm({
               type="date"
               value={uatEndDate}
               onChange={(e) => setUatEndDate(e.target.value)}
-              className="rounded border border-ink-soft/30 px-2 py-1"
+              className="rounded-md border border-ink-soft/30 px-2 py-1"
             />
           </label>
         </div>
@@ -177,7 +177,7 @@ export function EngagementConfigForm({
                 required
                 value={sla[p]}
                 onChange={(e) => setSla({ ...sla, [p]: Number(e.target.value) })}
-                className="rounded border border-ink-soft/30 px-2 py-1"
+                className="rounded-md border border-ink-soft/30 px-2 py-1"
               />
             </label>
           ))}
@@ -187,7 +187,7 @@ export function EngagementConfigForm({
       <button
         type="submit"
         disabled={saving}
-        className="w-fit rounded bg-brand-blue px-4 py-2 font-bold text-white hover:bg-primary-active disabled:opacity-60"
+        className="w-fit rounded-md bg-brand-blue px-4 py-2 font-bold text-white hover:bg-primary-active disabled:opacity-60"
       >
         {saving ? 'Saving…' : submitLabel}
       </button>

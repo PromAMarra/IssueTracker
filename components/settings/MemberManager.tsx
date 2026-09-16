@@ -73,12 +73,12 @@ export function MemberManager({
           placeholder={copy.placeholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="flex-1 rounded border border-ink-soft/30 px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-ink-soft/30 px-3 py-2 text-sm"
         />
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
+          className="rounded-md bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
         >
           Add
         </button>

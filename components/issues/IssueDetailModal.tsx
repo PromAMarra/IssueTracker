@@ -192,7 +192,7 @@ export function IssueDetailModal({
                 value={issue.status}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueStatus(issueId, e.target.value as Status))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
+                className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -207,7 +207,7 @@ export function IssueDetailModal({
                 value={issue.priority}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssuePriority(issueId, e.target.value as Priority))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal capitalize"
+                className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal capitalize"
               >
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>
@@ -222,7 +222,7 @@ export function IssueDetailModal({
                 value={issue.module ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueModule(issueId, e.target.value || null))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
+                className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 <option value="">No module</option>
                 {modules.map((m) => (
@@ -238,7 +238,7 @@ export function IssueDetailModal({
                 value={issue.assignee_id ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueAssignee(issueId, e.target.value || null))}
-                className="rounded border border-ink-soft/30 px-2 py-1 text-sm font-normal"
+                className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 <option value="">Unassigned</option>
                 {teamMembers.map((m) => (
@@ -331,12 +331,12 @@ export function IssueDetailModal({
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
                 placeholder="Add a comment"
-                className="flex-1 rounded border border-ink-soft/30 px-3 py-2 text-sm"
+                className="flex-1 rounded-md border border-ink-soft/30 px-3 py-2 text-sm"
               />
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
+                className="rounded-md bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
               >
                 Send
               </button>

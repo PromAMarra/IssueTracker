@@ -86,7 +86,7 @@ export function Board({
                           value={issue.status}
                           disabled={pendingId === issue.id}
                           onChange={(e) => run(issue.id, () => updateIssueStatus(issue.id, e.target.value as Status))}
-                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                          className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                         >
                           {STATUSES.map((s) => (
                             <option key={s} value={s}>
@@ -103,7 +103,7 @@ export function Board({
                           onChange={(e) =>
                             run(issue.id, () => updateIssuePriority(issue.id, e.target.value as Priority))
                           }
-                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal capitalize"
+                          className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal capitalize"
                         >
                           {PRIORITIES.map((p) => (
                             <option key={p} value={p}>
@@ -118,7 +118,7 @@ export function Board({
                           value={issue.assignee_id ?? ''}
                           disabled={pendingId === issue.id}
                           onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
-                          className="rounded border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                          className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                         >
                           <option value="">Unassigned</option>
                           {teamMembers.map((m) => (

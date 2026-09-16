@@ -80,7 +80,7 @@ export function NewIssueForm({
           placeholder="Issue title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
+          className="rounded-md border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
@@ -91,7 +91,7 @@ export function NewIssueForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
+          className="rounded-md border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
       <div className="flex flex-wrap gap-3">
@@ -100,7 +100,7 @@ export function NewIssueForm({
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as Priority)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal capitalize text-ink"
+            className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal capitalize text-ink"
           >
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -114,7 +114,7 @@ export function NewIssueForm({
           <select
             value={module}
             onChange={(e) => setModule(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
+            className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">No module</option>
             {modules.map((m) => (
@@ -129,7 +129,7 @@ export function NewIssueForm({
           <select
             value={testCasePackage}
             onChange={(e) => setTestCasePackage(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
+            className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">No test case package</option>
             {testCasePackages.map((p) => (
@@ -144,7 +144,7 @@ export function NewIssueForm({
           <select
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
-            className="rounded border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
+            className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">Unassigned</option>
             {teamMembers.map((m) => (
@@ -162,7 +162,7 @@ export function NewIssueForm({
           value={testCaseStep}
           onChange={(e) => setTestCaseStep(e.target.value)}
           rows={2}
-          className="rounded border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
+          className="rounded-md border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
@@ -179,7 +179,7 @@ export function NewIssueForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-fit rounded bg-brand-blue px-4 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
+        className="w-fit rounded-md bg-brand-blue px-4 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
       >
         {submitting ? 'Reporting…' : 'Report issue'}
       </button>
