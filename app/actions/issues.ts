@@ -3,6 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
+import { sendNotificationEmail } from '@/lib/email/sendNotificationEmail';
+import {
+  commentAddedEmail,
+  commentEmailRecipientIds,
+  issueAssignedEmail,
+  statusChangedEmail,
+  statusEmailLabel,
+  type IssueEmailContext,
+} from '@/lib/email/issueEmails';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
@@ -91,10 +100,24 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     .select('id')
     .single();
   if (error) throw error;
+  const issueId = data.id as string;
   revalidatePath(`/${input.engagementId}/board`);
   revalidatePath(`/${input.engagementId}/list`);
   revalidatePath(`/${input.engagementId}/dashboard`);
-  return data.id as string;
+
+  // Same condition as the `issues_notify_assigned` trigger: a real assignee,
+  // who isn't the person doing the assigning.
+  const notifyAssigneeId = assigneeId && assigneeId !== session.id ? assigneeId : null;
+  if (notifyAssigneeId) {
+    await notifyByEmail(() =>
+      emailIssueAssigned(
+        supabase,
+        { issueId, engagementId: input.engagementId, key: keyData as string, title },
+        notifyAssigneeId,
+      ),
+    );
+  }
+  return issueId;
 }
 
 async function requireProm() {
@@ -122,7 +145,7 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
     .from('issues')
-    .select('status, engagement_id, reporter_id, assignee_id')
+    .select('status, engagement_id, reporter_id, assignee_id, key, title')
     .eq('id', issueId)
     .single();
   if (fetchError) throw fetchError;
@@ -156,6 +179,33 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
   revalidatePath(`/${current.engagement_id}/dashboard`);
+
+  // Email the reporter — only on a real status change (the
+  // `notify_status_changed` trigger's `is distinct from` guard: re-dropping a
+  // card in the column it already sits in must not mail anyone) and never to
+  // the Prometeia user who just made the change.
+  // The close-time hand-back above also flips assignee_id to the reporter, but
+  // deliberately does NOT send a second "assigned to you" email: that would be
+  // two emails to the same person for one action, and the status email already
+  // tells them the ticket is theirs to verify.
+  const reporterId = current.reporter_id as string;
+  if (newStatus !== current.status && reporterId !== session.id) {
+    const label = statusEmailLabel(newStatus, isReopen);
+    await notifyByEmail(async () => {
+      const [to] = await recipientEmails(supabase, [reporterId]);
+      if (!to) return;
+      const { subject, body } = statusChangedEmail(
+        {
+          issueId,
+          engagementId: current.engagement_id,
+          key: current.key,
+          title: current.title,
+        },
+        label,
+      );
+      await sendNotificationEmail({ to, subject, body });
+    });
+  }
 }
 
 export async function updateIssuePriority(issueId: string, newPriority: Priority) {
@@ -190,12 +240,55 @@ async function profileName(
   return data ? data.full_name ?? data.email : 'Unassigned';
 }
 
+// --- Notification emails ----------------------------------------------------
+// The in-app `notifications` rows for these same three events are written by
+// the DB triggers in migrations 0008/0009 and are untouched here. This only
+// adds the email that goes out alongside them, always after the underlying
+// mutation has already committed.
+
+/**
+ * Runs post-mutation notification work without letting it reach the caller.
+ * The mutation is already committed by the time this runs, so neither the
+ * extra profile lookups (which can throw) nor the send itself may turn a
+ * successful mutation into an error for the user.
+ */
+async function notifyByEmail(run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch (err) {
+    console.warn('[issues] notification email dispatch failed:', err);
+  }
+}
+
+async function recipientEmails(
+  supabase: ReturnType<typeof createServerClient>,
+  userIds: string[],
+): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await supabase.from('profiles').select('email').in('id', userIds);
+  if (error) throw error;
+  return ((data ?? []) as { email: string | null }[])
+    .map((row) => row.email)
+    .filter((email): email is string => Boolean(email));
+}
+
+async function emailIssueAssigned(
+  supabase: ReturnType<typeof createServerClient>,
+  ctx: IssueEmailContext,
+  assigneeId: string,
+): Promise<void> {
+  const [to] = await recipientEmails(supabase, [assigneeId]);
+  if (!to) return;
+  const { subject, body } = issueAssignedEmail(ctx);
+  await sendNotificationEmail({ to, subject, body });
+}
+
 export async function updateIssueAssignee(issueId: string, newAssigneeId: string | null) {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
     .from('issues')
-    .select('assignee_id, engagement_id')
+    .select('assignee_id, engagement_id, key, title')
     .eq('id', issueId)
     .single();
   if (fetchError) throw fetchError;
@@ -210,6 +303,28 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
   await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id);
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
+
+  // Same condition as the `issues_notify_assigned` trigger: a real assignee
+  // (un-assigning emails nobody), actually changed, and not the person doing
+  // the assigning.
+  const notifyAssigneeId =
+    newAssigneeId && newAssigneeId !== current.assignee_id && newAssigneeId !== session.id
+      ? newAssigneeId
+      : null;
+  if (notifyAssigneeId) {
+    await notifyByEmail(() =>
+      emailIssueAssigned(
+        supabase,
+        {
+          issueId,
+          engagementId: current.engagement_id,
+          key: current.key,
+          title: current.title,
+        },
+        notifyAssigneeId,
+      ),
+    );
+  }
 }
 
 export async function updateIssueModule(issueId: string, newModule: string | null) {
@@ -244,7 +359,44 @@ export async function addComment(issueId: string, body: string): Promise<string>
     .select('id')
     .single();
   if (error) throw error;
-  return data.id as string;
+  const commentId = data.id as string;
+
+  // Everyone on the ticket except whoever just wrote the comment — the same
+  // set the `comments_notify_participants` trigger notifies in-app.
+  await notifyByEmail(async () => {
+    const { data: issue, error: issueError } = await supabase
+      .from('issues')
+      .select('engagement_id, key, title, reporter_id, assignee_id')
+      .eq('id', issueId)
+      .maybeSingle();
+    if (issueError) throw issueError;
+    if (!issue) return;
+
+    const recipients = await recipientEmails(
+      supabase,
+      commentEmailRecipientIds({
+        reporterId: issue.reporter_id as string,
+        assigneeId: (issue.assignee_id as string | null) ?? null,
+        authorId: session.id,
+      }),
+    );
+    if (recipients.length === 0) return;
+
+    const { subject, body: emailBody } = commentAddedEmail(
+      {
+        issueId,
+        engagementId: issue.engagement_id,
+        key: issue.key,
+        title: issue.title,
+      },
+      session.profile.full_name ?? session.email,
+    );
+    await Promise.all(
+      recipients.map((to) => sendNotificationEmail({ to, subject, body: emailBody })),
+    );
+  });
+
+  return commentId;
 }
 
 export type CommentRow = {
