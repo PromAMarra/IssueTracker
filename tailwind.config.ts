@@ -23,8 +23,8 @@ const config: Config = {
         surface: '#FFFFFF',
       },
       fontFamily: {
-        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+        sans: ['Arial', '"Inter"', 'Helvetica', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Consolas', 'ui-monospace', 'monospace'],
       },
     },
   },
