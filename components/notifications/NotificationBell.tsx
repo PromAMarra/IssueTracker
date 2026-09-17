@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRotateRight, faBell, faEnvelope, faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
 import {
-  deleteAllNotifications,
+  deleteNotifications,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsRead,
@@ -16,43 +18,14 @@ const POLL_MS = 30000;
 const TOOLBAR_BUTTON_CLASS =
   'flex h-7 w-7 items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-soft';
 
-function IconRefresh({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  );
-}
-
-function IconEnvelope({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
-  );
-}
-
-function IconTrash({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M4 7h16" />
-      <path d="M9 7V4h6v3" />
-      <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
-    </svg>
-  );
-}
-
 export function NotificationBell() {
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRow[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function refreshCount() {
@@ -68,30 +41,36 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    const allSelected = notifications !== null && notifications.length > 0 && selected.size === notifications.length;
+    const noneSelected = selected.size === 0;
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = !allSelected && !noneSelected;
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [selected, notifications]);
+
+  async function loadPanel() {
+    setLoading(true);
+    try {
+      const [list, count] = await Promise.all([listNotifications(), getUnreadNotificationCount()]);
+      setNotifications(list);
+      setUnreadCount(count);
+      setSelected(new Set());
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function toggleOpen() {
     const next = !open;
     setOpen(next);
-    if (next) {
-      setLoading(true);
-      try {
-        setNotifications(await listNotifications());
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (next) await loadPanel();
   }
 
-  async function handleSelect(n: NotificationRow) {
+  function close() {
     setOpen(false);
+  }
+
+  async function handleSelectNotification(n: NotificationRow) {
     if (!n.readAt) {
       try {
         await markNotificationRead(n.id);
@@ -100,7 +79,24 @@ export function NotificationBell() {
         // non-critical — navigation still proceeds
       }
     }
+    close();
     router.push(`/${n.engagementId}/board?issue=${n.issueId}`);
+  }
+
+  function toggleChecked(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      if (notifications === null) return prev;
+      return prev.size === notifications.length ? new Set() : new Set(notifications.map((n) => n.id));
+    });
   }
 
   async function handleMarkAllRead() {
@@ -113,40 +109,32 @@ export function NotificationBell() {
     }
   }
 
-  async function handleRefresh() {
-    setLoading(true);
+  async function handleDeleteSelected() {
+    if (selected.size === 0) return;
+    const count = selected.size;
+    if (!window.confirm(`Delete ${count} notification${count === 1 ? '' : 's'}? This cannot be undone.`)) return;
     try {
-      const [list, count] = await Promise.all([listNotifications(), getUnreadNotificationCount()]);
-      setNotifications(list);
-      setUnreadCount(count);
-    } catch {
-      // transient error — user can retry
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeleteAll() {
-    if (!notifications?.length) return;
-    if (!window.confirm('Delete all notifications? This cannot be undone.')) return;
-    try {
-      await deleteAllNotifications();
-      setNotifications([]);
-      setUnreadCount(0);
+      await deleteNotifications(Array.from(selected));
+      await loadPanel();
     } catch {
       // ignore — user can retry
     }
   }
 
+  const allSelected = useMemo(
+    () => notifications !== null && notifications.length > 0 && selected.size === notifications.length,
+    [notifications, selected],
+  );
+
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <button
         type="button"
         onClick={toggleOpen}
         aria-label="Notifications"
         className="relative rounded-full p-2 text-ink-soft hover:bg-primary-soft hover:text-ink"
       >
-        🔔
+        <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -154,64 +142,103 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-ink-soft/10 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-ink-soft/10 px-3 py-2">
-            <span className="text-sm font-semibold text-ink">Notifications</span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={loading}
-                aria-label="Refresh"
-                title="Refresh"
-                className={TOOLBAR_BUTTON_CLASS}
-              >
-                <IconRefresh className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              <button
-                type="button"
-                onClick={handleMarkAllRead}
-                disabled={unreadCount === 0}
-                aria-label="Mark all as read"
-                title="Mark all as read"
-                className={TOOLBAR_BUTTON_CLASS}
-              >
-                <IconEnvelope className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAll}
-                disabled={!notifications?.length}
-                aria-label="Delete all"
-                title="Delete all"
-                className={TOOLBAR_BUTTON_CLASS}
-              >
-                <IconTrash className="h-4 w-4" />
-              </button>
+        <div className="fixed inset-0 z-30 flex justify-end bg-black/40" onClick={close}>
+          <div
+            className="flex h-full w-full max-w-sm flex-col bg-white shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+              <span className="text-sm font-bold text-ink">Notifications</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={loadPanel}
+                  disabled={loading}
+                  aria-label="Refresh"
+                  title="Refresh"
+                  className={TOOLBAR_BUTTON_CLASS}
+                >
+                  <FontAwesomeIcon icon={faArrowRotateRight} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  disabled={unreadCount === 0}
+                  aria-label="Mark all as read"
+                  title="Mark all as read"
+                  className={TOOLBAR_BUTTON_CLASS}
+                >
+                  <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={selected.size === 0}
+                  aria-label="Delete selected"
+                  title="Delete selected"
+                  className={TOOLBAR_BUTTON_CLASS}
+                >
+                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Close"
+                  title="Close"
+                  className={TOOLBAR_BUTTON_CLASS}
+                >
+                  <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-          <ul className="max-h-96 overflow-y-auto">
-            {loading && <li className="px-3 py-4 text-sm text-ink-soft">Loading…</li>}
-            {!loading && notifications?.length === 0 && (
-              <li className="px-3 py-4 text-sm text-ink-soft">No notifications yet.</li>
+
+            {!loading && notifications !== null && notifications.length > 0 && (
+              <label className="flex items-center gap-2 border-b border-hairline px-4 py-2 text-xs font-semibold text-ink-soft">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="h-3.5 w-3.5 rounded border-hairline text-brand-blue focus:ring-brand-blue"
+                />
+                Select all
+                {selected.size > 0 && <span className="text-ink-soft">({selected.size} selected)</span>}
+              </label>
             )}
-            {!loading &&
-              notifications?.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(n)}
-                    className={`flex w-full flex-col gap-0.5 border-b border-ink-soft/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-primary-soft ${
-                      n.readAt ? 'text-ink-soft' : 'font-medium text-ink'
-                    }`}
-                  >
-                    <span className="font-mono text-xs text-ink-soft">{n.issueKey}</span>
-                    <span>{n.message}</span>
-                    <span className="text-xs text-ink-soft">{new Date(n.createdAt).toLocaleString('en-GB')}</span>
-                  </button>
-                </li>
-              ))}
-          </ul>
+
+            <ul className="flex-1 overflow-y-auto">
+              {loading && <li className="px-4 py-4 text-sm text-ink-soft">Loading…</li>}
+              {!loading && notifications?.length === 0 && (
+                <li className="px-4 py-4 text-sm text-ink-soft">No notifications yet.</li>
+              )}
+              {!loading &&
+                notifications?.map((n) => (
+                  <li key={n.id} className="flex items-start gap-2 border-b border-hairline/60 px-4 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(n.id)}
+                      onChange={() => toggleChecked(n.id)}
+                      aria-label={`Select notification: ${n.message}`}
+                      className="mt-1 h-3.5 w-3.5 shrink-0 rounded border-hairline text-brand-blue focus:ring-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSelectNotification(n)}
+                      className={`flex w-full flex-col gap-0.5 text-left text-sm hover:text-brand-blue ${
+                        n.readAt ? 'text-ink-soft' : 'font-medium text-ink'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {!n.readAt && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue" />}
+                        <span className="font-mono text-xs text-ink-soft">{n.issueKey}</span>
+                      </span>
+                      <span>{n.message}</span>
+                      <span className="text-xs text-ink-soft">{new Date(n.createdAt).toLocaleString('en-GB')}</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>
