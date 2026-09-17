@@ -168,17 +168,50 @@ to click-specific lag were found.
   `app/actions/issues.ts` directly, so this is a regression check on the
   rest of the codebase, not direct coverage of the change).
 - `npx tsc --noEmit` — clean, no errors.
-- `npm run build` — see note below.
+- `npm run build` — webpack compilation succeeds and all 7 app routes
+  build; the overall command still exits non-zero for reasons fully
+  unrelated to this change (see note below).
 
-**Build note:** `node_modules` did not exist in this fresh worktree and had
-to be installed. The install (and a subsequent manual re-extraction)
-repeatedly produced an incomplete, corrupted `core-js` package (missing
-`package.json` and dozens of `internals/*.js` files), which broke webpack
-module resolution for the unrelated `jspdf`/`canvg` dependency chain used
-by `lib/exportPdf.ts` / `components/dashboard/ExportPdfButton.tsx` (PDF
-export). This reproduced twice from scratch and looks like an environment
-issue in this sandbox (file-write throughput for the large number of small
-files in `core-js`, consistent with aggressive on-access antivirus/EDR
-scanning) rather than anything related to this change — `core-js` is many
-require-hops away from `app/actions/issues.ts`, which this change is
-scoped to, and doesn't import it directly or indirectly.
+**Build note (two separate pre-existing environment issues, neither caused
+by this change):**
+
+1. `node_modules` did not exist in this fresh worktree and had to be
+   installed. The install (and a first re-extraction attempt) repeatedly
+   produced an incomplete/corrupted `core-js` package (missing
+   `package.json` and hundreds of `internals/*.js` files), which broke
+   webpack module resolution for the unrelated `jspdf`/`canvg` dependency
+   chain used by `lib/exportPdf.ts` / `components/dashboard/ExportPdfButton.tsx`
+   (PDF export). This reproduced twice from scratch and is consistent with
+   this sandbox's very slow per-file write throughput for large
+   many-small-file installs (symptomatic of on-access antivirus/EDR
+   scanning intercepting each new file). Extracting the official `core-js`
+   tarball directly resolved it — once `core-js` was fully present, the
+   "Module not found" errors disappeared and webpack compiled cleanly with
+   zero errors, `Generating static pages (7/7)`.
+2. With compilation fixed, `next build`'s static-export step still fails —
+   but only while prerendering the framework's own default `/404` and
+   `/500` error pages, with `TypeError: Cannot read properties of null
+   (reading 'useContext')`. The stack trace shows `react` resolved from
+   this worktree's own `node_modules` (`.../worktrees/agent-.../node_modules/react`)
+   while `react-dom`'s server renderer resolved from the **outer, parent
+   checkout's** `node_modules` (`C:\dev\uat-tracker\node_modules\react-dom`)
+   — two distinct copies of React, which breaks context (`useContext`
+   returns null when the context object's identity differs between
+   copies). This worktree is physically nested inside the main checkout
+   (`C:\dev\uat-tracker\.claude\worktrees\agent-.../`), and both directories
+   have their own independently-installed, same-version (18.3.1) but
+   distinct `react`/`react-dom` trees; Node's module resolution reached
+   past this worktree's own (complete, verified) copy for this one
+   generated bundle. This is a directory-topology artifact of a worktree
+   nested inside its own parent checkout, not a code defect, and it only
+   affects Next's generic built-in error pages — not any route this app
+   actually serves, and nothing on the code path this task touches
+   (Server Actions, notifications, `router.refresh()`).
+
+Given both causes are fully diagnosed, reproducible independent of this
+diff, and outside this change's blast radius (`app/actions/issues.ts`
+doesn't touch React rendering, jspdf/canvg, or module resolution), I'm
+treating `npm test` + `npx tsc --noEmit` + a clean webpack compilation as
+sufficient verification for this change, while flagging the unresolved
+static-export/duplicate-React-instance issue as a pre-existing environment
+concern for awareness, not something fixed here.
