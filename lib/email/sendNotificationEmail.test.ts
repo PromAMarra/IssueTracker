@@ -79,4 +79,29 @@ describe('sendNotificationEmail', () => {
     expect(mockedGetResendClient).not.toHaveBeenCalled();
     expect(sendMock).not.toHaveBeenCalled();
   });
+
+  it('does not hang when the Resend send call never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      mockedIsResendConfigured.mockReturnValue(true);
+      // A send that never resolves/rejects, simulating a hung network call.
+      sendMock.mockImplementation(() => new Promise(() => {}));
+      mockedGetResendClient.mockReturnValue({ emails: { send: sendMock } } as any);
+
+      const resultPromise = sendNotificationEmail({
+        to: 'user@example.com',
+        subject: 'You have a new task',
+        body: 'Please review the item.',
+      });
+
+      // Advance past the internal send timeout (5s) without waiting in real
+      // time — fake timers make this instantaneous.
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await expect(resultPromise).resolves.toBeUndefined();
+      expect(sendMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
