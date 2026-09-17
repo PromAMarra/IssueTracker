@@ -6,6 +6,7 @@ import {
   issueKeyPrefix,
   issueUrl,
   statusChangedEmail,
+  statusChangedEmailRecipientIds,
   statusEmailLabel,
   type IssueEmailContext,
 } from './issueEmails';
@@ -139,5 +140,56 @@ describe('commentEmailRecipientIds', () => {
     expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', authorId: 'r' })).toEqual(
       [],
     );
+  });
+});
+
+describe('statusChangedEmailRecipientIds', () => {
+  it('emails both reporter and assignee for a non-closing change by a third party', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', actorId: 'x' }),
+    ).toEqual(['r', 'a']);
+  });
+
+  it('never emails the actor who made the change', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', actorId: 'r' }),
+    ).toEqual(['a']);
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', actorId: 'a' }),
+    ).toEqual(['r']);
+  });
+
+  it('still emails the reporter when the ticket is unassigned', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: null, actorId: 'x' }),
+    ).toEqual(['r']);
+  });
+
+  it('dedupes when reporter and assignee are the same person', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', actorId: 'x' }),
+    ).toEqual(['r']);
+  });
+
+  it('emails nobody when the reporter changes their own unassigned ticket', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: null, actorId: 'r' }),
+    ).toEqual([]);
+  });
+
+  it('emails nobody when the reporter is also the assignee and makes the change', () => {
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', actorId: 'r' }),
+    ).toEqual([]);
+  });
+
+  it('matches the trigger on a closing change: passing a null assignee skips the old assignee entirely', () => {
+    // `updateIssueStatus` passes `null` for `assigneeId` on a closing change
+    // (the ticket has already been reassigned to the reporter by then), so
+    // the pre-update assignee must never appear here even though they were a
+    // real, distinct assignee moments before.
+    expect(
+      statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: null, actorId: 'x' }),
+    ).toEqual(['r']);
   });
 });

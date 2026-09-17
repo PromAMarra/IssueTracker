@@ -121,3 +121,34 @@ export function commentEmailRecipientIds({
   }
   return recipients;
 }
+
+/**
+ * Who hears about a status change: mirrors the `notify_status_changed`
+ * trigger's two insert blocks exactly — reporter unless they are the one who
+ * made the change, plus the assignee unless they are the one who made the
+ * change or are already the reporter. `assigneeId` must be the assignee as
+ * of *after* the update lands (the trigger reads `new.assignee_id`), not
+ * necessarily whatever it was before: on a closing change the app hands the
+ * ticket back to the reporter first, so by the time this runs the assignee
+ * and reporter are the same person and the assignee branch is naturally a
+ * no-op, exactly as it is in the trigger. An unassigned ticket, or one where
+ * the assignee is already the reporter or is the person making the change,
+ * only ever notifies the reporter (or nobody, if the reporter is also the
+ * one making the change).
+ */
+export function statusChangedEmailRecipientIds({
+  reporterId,
+  assigneeId,
+  actorId,
+}: {
+  reporterId: string;
+  assigneeId: string | null;
+  actorId: string;
+}): string[] {
+  const recipients: string[] = [];
+  if (reporterId !== actorId) recipients.push(reporterId);
+  if (assigneeId && assigneeId !== actorId && assigneeId !== reporterId) {
+    recipients.push(assigneeId);
+  }
+  return recipients;
+}

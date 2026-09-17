@@ -9,6 +9,7 @@ import {
   commentEmailRecipientIds,
   issueAssignedEmail,
   statusChangedEmail,
+  statusChangedEmailRecipientIds,
   statusEmailLabel,
   type IssueEmailContext,
 } from '@/lib/email/issueEmails';
@@ -180,20 +181,29 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   revalidatePath(`/${current.engagement_id}/list`);
   revalidatePath(`/${current.engagement_id}/dashboard`);
 
-  // Email the reporter — only on a real status change (the
-  // `notify_status_changed` trigger's `is distinct from` guard: re-dropping a
-  // card in the column it already sits in must not mail anyone) and never to
-  // the Prometeia user who just made the change.
-  // The close-time hand-back above also flips assignee_id to the reporter, but
-  // deliberately does NOT send a second "assigned to you" email: that would be
-  // two emails to the same person for one action, and the status email already
-  // tells them the ticket is theirs to verify.
+  // Email the reporter and, for a non-closing change, the assignee — only on
+  // a real status change (the `notify_status_changed` trigger's
+  // `is distinct from` guard: re-dropping a card in the column it already
+  // sits in must not mail anyone), via `statusChangedEmailRecipientIds`,
+  // which mirrors both of that trigger's insert blocks.
+  // The close-time hand-back above also flips assignee_id to the reporter
+  // before this ever runs, so `new.assignee_id === new.reporter_id` by the
+  // time the trigger (and this) evaluate the assignee branch — pass `null`
+  // rather than the pre-update assignee, or the old assignee would be
+  // incorrectly re-notified. This also deliberately avoids a second
+  // "assigned to you" email on close: the status email already tells the
+  // reporter the ticket is theirs to verify.
   const reporterId = current.reporter_id as string;
-  if (newStatus !== current.status && reporterId !== session.id) {
+  if (newStatus !== current.status) {
     const label = statusEmailLabel(newStatus, isReopen);
     await notifyByEmail(async () => {
-      const [to] = await recipientEmails(supabase, [reporterId]);
-      if (!to) return;
+      const recipientIds = statusChangedEmailRecipientIds({
+        reporterId,
+        assigneeId: isClosing ? null : current.assignee_id,
+        actorId: session.id,
+      });
+      const recipients = await recipientEmails(supabase, recipientIds);
+      if (recipients.length === 0) return;
       const { subject, body } = statusChangedEmail(
         {
           issueId,
@@ -203,7 +213,9 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
         },
         label,
       );
-      await sendNotificationEmail({ to, subject, body });
+      await Promise.all(
+        recipients.map((to) => sendNotificationEmail({ to, subject, body })),
+      );
     });
   }
 }
