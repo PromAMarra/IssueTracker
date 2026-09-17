@@ -106,9 +106,12 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   revalidatePath(`/${input.engagementId}/list`);
   revalidatePath(`/${input.engagementId}/dashboard`);
 
-  // Same condition as the `issues_notify_assigned` trigger: a real assignee,
-  // who isn't the person doing the assigning.
-  const notifyAssigneeId = assigneeId && assigneeId !== session.id ? assigneeId : null;
+  // Same condition as the `issues_notify_assigned` trigger: a real assignee.
+  // Assigning a ticket to yourself does email you, matching the trigger since
+  // migration 0014 dropped its `<> auth.uid()` self-action clause. The const
+  // is not redundant: `assigneeId` is a `let`, so its narrowing would not
+  // survive into the callback below.
+  const notifyAssigneeId = assigneeId;
   if (notifyAssigneeId) {
     await notifyByEmail(() =>
       emailIssueAssigned(
@@ -254,9 +257,9 @@ async function profileName(
 
 // --- Notification emails ----------------------------------------------------
 // The in-app `notifications` rows for these same three events are written by
-// the DB triggers in migrations 0008/0009 and are untouched here. This only
-// adds the email that goes out alongside them, always after the underlying
-// mutation has already committed.
+// the DB triggers in migrations 0008/0009 (redefined in 0014) and are
+// untouched here. This only adds the email that goes out alongside them,
+// always after the underlying mutation has already committed.
 
 /**
  * Runs post-mutation notification work without letting it reach the caller.
@@ -317,12 +320,12 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
   revalidatePath(`/${current.engagement_id}/list`);
 
   // Same condition as the `issues_notify_assigned` trigger: a real assignee
-  // (un-assigning emails nobody), actually changed, and not the person doing
-  // the assigning.
+  // (un-assigning emails nobody) that actually changed. The trigger's
+  // `is distinct from old.assignee_id` real-change guard is mirrored here;
+  // its `<> auth.uid()` self-action clause is gone as of migration 0014, so
+  // assigning a ticket to yourself now emails you.
   const notifyAssigneeId =
-    newAssigneeId && newAssigneeId !== current.assignee_id && newAssigneeId !== session.id
-      ? newAssigneeId
-      : null;
+    newAssigneeId && newAssigneeId !== current.assignee_id ? newAssigneeId : null;
   if (notifyAssigneeId) {
     await notifyByEmail(() =>
       emailIssueAssigned(
@@ -373,8 +376,8 @@ export async function addComment(issueId: string, body: string): Promise<string>
   if (error) throw error;
   const commentId = data.id as string;
 
-  // Everyone on the ticket except whoever just wrote the comment — the same
-  // set the `comments_notify_participants` trigger notifies in-app.
+  // Everyone on the ticket, the author included — the same set the
+  // `comments_notify_participants` trigger notifies in-app.
   await notifyByEmail(async () => {
     const { data: issue, error: issueError } = await supabase
       .from('issues')

@@ -109,12 +109,16 @@ describe('commentEmailRecipientIds', () => {
     ).toEqual(['r', 'a']);
   });
 
-  it('never emails the comment author their own comment', () => {
+  it('emails the comment author too when they are on the ticket', () => {
+    // Self-action suppression was removed (migration 0014): a reporter or
+    // assignee who comments hears about their own comment like anyone else.
     expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', authorId: 'r' })).toEqual([
+      'r',
       'a',
     ]);
     expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', authorId: 'a' })).toEqual([
       'r',
+      'a',
     ]);
   });
 
@@ -130,16 +134,18 @@ describe('commentEmailRecipientIds', () => {
     ]);
   });
 
-  it('emails nobody when the reporter comments on their own unassigned ticket', () => {
-    expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: null, authorId: 'r' })).toEqual(
-      [],
-    );
+  it('emails the reporter when they comment on their own unassigned ticket', () => {
+    expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: null, authorId: 'r' })).toEqual([
+      'r',
+    ]);
   });
 
-  it('emails nobody when the reporter is also the assignee and comments', () => {
-    expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', authorId: 'r' })).toEqual(
-      [],
-    );
+  it('emails a reporter who is also the assignee and author exactly once', () => {
+    // Both mechanisms at play: self-notification now happens (so not zero),
+    // and the reporter/assignee dedupe still holds (so not twice).
+    expect(commentEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', authorId: 'r' })).toEqual([
+      'r',
+    ]);
   });
 });
 
@@ -150,13 +156,15 @@ describe('statusChangedEmailRecipientIds', () => {
     ).toEqual(['r', 'a']);
   });
 
-  it('never emails the actor who made the change', () => {
+  it('emails the actor who made the change too when they are on the ticket', () => {
+    // Self-action suppression was removed (migration 0014): a reporter or
+    // assignee who moves the ticket is notified like anyone else.
     expect(
       statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', actorId: 'r' }),
-    ).toEqual(['a']);
+    ).toEqual(['r', 'a']);
     expect(
       statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'a', actorId: 'a' }),
-    ).toEqual(['r']);
+    ).toEqual(['r', 'a']);
   });
 
   it('still emails the reporter when the ticket is unassigned', () => {
@@ -171,16 +179,19 @@ describe('statusChangedEmailRecipientIds', () => {
     ).toEqual(['r']);
   });
 
-  it('emails nobody when the reporter changes their own unassigned ticket', () => {
+  it('emails the reporter when they change their own unassigned ticket', () => {
     expect(
       statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: null, actorId: 'r' }),
-    ).toEqual([]);
+    ).toEqual(['r']);
   });
 
-  it('emails nobody when the reporter is also the assignee and makes the change', () => {
+  it('emails a reporter who is also the assignee and actor exactly once', () => {
+    // Both mechanisms at play: self-notification now happens (so not zero),
+    // and the reporter/assignee dedupe still holds (so not twice). This is
+    // also the shape of a Prometeia user closing a ticket they reported.
     expect(
       statusChangedEmailRecipientIds({ reporterId: 'r', assigneeId: 'r', actorId: 'r' }),
-    ).toEqual([]);
+    ).toEqual(['r']);
   });
 
   it('matches the trigger on a closing change: passing a null assignee skips the old assignee entirely', () => {

@@ -98,25 +98,27 @@ export function statusChangedEmail(
 }
 
 /**
- * Who hears about a new comment: everyone involved in the ticket except the
- * person who just wrote it. Mirrors the `notify_comment_added` trigger exactly
- * — reporter unless they are the author, plus the assignee unless they are the
- * author or are already the reporter. An unassigned ticket still notifies the
- * reporter; a ticket the reporter comments on themselves with no other
- * assignee notifies nobody.
+ * Who hears about a new comment: everyone involved in the ticket, including
+ * the person who just wrote it. Mirrors the `notify_comment_added` trigger
+ * exactly (see migration 0014) — always the reporter, plus the assignee unless
+ * they are already the reporter. That last check is a dedupe, not self-action
+ * suppression: it keeps one person who is both reporter and assignee from
+ * being emailed twice about a single comment. The author is deliberately NOT
+ * excluded — users asked to be notified about their own actions too — so a
+ * reporter commenting on their own ticket does get their own email.
+ * `authorId` is still taken because the caller has it and the parity with the
+ * trigger's signature is worth keeping, but it no longer filters anyone out.
  */
 export function commentEmailRecipientIds({
   reporterId,
   assigneeId,
-  authorId,
 }: {
   reporterId: string;
   assigneeId: string | null;
   authorId: string;
 }): string[] {
-  const recipients: string[] = [];
-  if (reporterId !== authorId) recipients.push(reporterId);
-  if (assigneeId && assigneeId !== authorId && assigneeId !== reporterId) {
+  const recipients: string[] = [reporterId];
+  if (assigneeId && assigneeId !== reporterId) {
     recipients.push(assigneeId);
   }
   return recipients;
@@ -124,30 +126,32 @@ export function commentEmailRecipientIds({
 
 /**
  * Who hears about a status change: mirrors the `notify_status_changed`
- * trigger's two insert blocks exactly — reporter unless they are the one who
- * made the change, plus the assignee unless they are the one who made the
- * change or are already the reporter. `assigneeId` must be the assignee as
- * of *after* the update lands (the trigger reads `new.assignee_id`), not
- * necessarily whatever it was before: on a closing change the app hands the
- * ticket back to the reporter first, so by the time this runs the assignee
- * and reporter are the same person and the assignee branch is naturally a
- * no-op, exactly as it is in the trigger. An unassigned ticket, or one where
- * the assignee is already the reporter or is the person making the change,
- * only ever notifies the reporter (or nobody, if the reporter is also the
- * one making the change).
+ * trigger's two insert blocks exactly (see migration 0014) — always the
+ * reporter, plus the assignee unless they are already the reporter. As with
+ * comments, the person who made the change is NOT excluded; the surviving
+ * `!== reporterId` check is a dedupe, so a reporter who is also the assignee
+ * is emailed once rather than twice. `actorId` is therefore no longer a
+ * filter, but is kept in the signature so call sites and tests can still
+ * state who acted.
+ *
+ * `assigneeId` must be the assignee as of *after* the update lands (the
+ * trigger reads `new.assignee_id`), not necessarily whatever it was before:
+ * on a closing change the app hands the ticket back to the reporter first, so
+ * by the time this runs the assignee and reporter are the same person and the
+ * assignee branch is naturally a no-op, exactly as it is in the trigger. An
+ * unassigned ticket, or one whose assignee is already the reporter, notifies
+ * the reporter alone.
  */
 export function statusChangedEmailRecipientIds({
   reporterId,
   assigneeId,
-  actorId,
 }: {
   reporterId: string;
   assigneeId: string | null;
   actorId: string;
 }): string[] {
-  const recipients: string[] = [];
-  if (reporterId !== actorId) recipients.push(reporterId);
-  if (assigneeId && assigneeId !== actorId && assigneeId !== reporterId) {
+  const recipients: string[] = [reporterId];
+  if (assigneeId && assigneeId !== reporterId) {
     recipients.push(assigneeId);
   }
   return recipients;
