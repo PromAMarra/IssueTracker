@@ -367,7 +367,7 @@ export function IssueDetailModal({
 
         <CollapsibleSection title="Time in status" icon={faClock}>
           <ul className="flex flex-col gap-1 text-sm">
-            {STATUSES.map((s) => (
+            {STATUSES.filter((s) => s !== 'closed' && s !== 'rejected').map((s) => (
               <li key={s} className="flex justify-between">
                 <span className="text-ink-soft">{STATUS_LABELS[s]}</span>
                 <span className="font-mono text-ink">{durations[s] > 0 ? `${durations[s].toFixed(1)}d` : '—'}</span>
