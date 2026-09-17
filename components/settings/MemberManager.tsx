@@ -56,7 +56,7 @@ export function MemberManager({
 
   return (
     <div className="max-w-xl">
-      <h2 className="mb-2 text-sm font-semibold text-ink">{copy.title}</h2>
+      <h2 className="mb-2 text-sm font-bold text-ink">{copy.title}</h2>
       <ul className="mb-3 flex flex-col gap-1">
         {members.map((m) => (
           <li key={m.email} className="text-sm text-ink-soft">

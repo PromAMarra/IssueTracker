@@ -3,7 +3,7 @@ import type { AgingRow } from '@/lib/kpi';
 export function AgingReportTable({ rows }: { rows: AgingRow[] }) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-ink">Aging — open issues, oldest first</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">Aging — open issues, oldest first</h3>
       {rows.length === 0 ? (
         <p className="text-sm text-ink-soft">No open issues.</p>
       ) : (

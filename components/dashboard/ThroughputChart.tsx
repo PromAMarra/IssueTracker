@@ -6,7 +6,7 @@ import type { ThroughputBucket } from '@/lib/kpi';
 export function ThroughputChart({ buckets }: { buckets: ThroughputBucket[] }) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-ink">Throughput (last {buckets.length} weeks)</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">Throughput (last {buckets.length} weeks)</h3>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={buckets} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />

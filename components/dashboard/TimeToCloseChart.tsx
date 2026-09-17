@@ -14,7 +14,7 @@ export function TimeToCloseChart({ rows }: { rows: TimeToCloseRow[] }) {
 
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-1 text-sm font-semibold text-ink">Time to close vs. SLA target</h3>
+      <h3 className="mb-1 text-sm font-bold text-ink">Time to close vs. SLA target</h3>
       <p className="mb-3 text-xs text-ink-soft">
         Average days to close, by priority. Red means the average missed the SLA target.
       </p>

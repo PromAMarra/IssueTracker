@@ -53,7 +53,7 @@ export function Board({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
       {STATUSES.map((status) => (
         <div key={status} className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-ink-soft">
             {COLUMN_LABELS[status]} · {issues.filter((i) => i.status === status).length}
           </h2>
           <div className="flex flex-col gap-3">
