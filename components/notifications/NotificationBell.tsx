@@ -51,7 +51,10 @@ export function NotificationBell() {
   async function loadPanel() {
     setLoading(true);
     try {
-      const [list, count] = await Promise.all([listNotifications(), getUnreadNotificationCount()]);
+      // Load enough that "select all" + delete actually clears a realistic
+      // backlog, not just the first page — the panel is now a full-height
+      // scrollable list, not a small 30-row dropdown.
+      const [list, count] = await Promise.all([listNotifications(200), getUnreadNotificationCount()]);
       setNotifications(list);
       setUnreadCount(count);
       setSelected(new Set());
