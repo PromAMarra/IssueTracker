@@ -85,3 +85,11 @@ export async function markAllNotificationsRead() {
     .is('read_at', null);
   if (error) throw error;
 }
+
+export async function deleteAllNotifications() {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const supabase = createServerClient();
+  const { error } = await supabase.from('notifications').delete().eq('user_id', session.id);
+  if (error) throw error;
+}

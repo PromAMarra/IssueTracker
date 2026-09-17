@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  deleteAllNotifications,
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsRead,
@@ -11,6 +12,39 @@ import {
 } from '@/app/actions/notifications';
 
 const POLL_MS = 30000;
+
+const TOOLBAR_BUTTON_CLASS =
+  'flex h-7 w-7 items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-soft';
+
+function IconRefresh({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
+
+function IconEnvelope({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  );
+}
+
+function IconTrash({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4 7h16" />
+      <path d="M9 7V4h6v3" />
+      <path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+    </svg>
+  );
+}
 
 export function NotificationBell() {
   const router = useRouter();
@@ -79,6 +113,31 @@ export function NotificationBell() {
     }
   }
 
+  async function handleRefresh() {
+    setLoading(true);
+    try {
+      const [list, count] = await Promise.all([listNotifications(), getUnreadNotificationCount()]);
+      setNotifications(list);
+      setUnreadCount(count);
+    } catch {
+      // transient error — user can retry
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteAll() {
+    if (!notifications?.length) return;
+    if (!window.confirm('Delete all notifications? This cannot be undone.')) return;
+    try {
+      await deleteAllNotifications();
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch {
+      // ignore — user can retry
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -98,11 +157,38 @@ export function NotificationBell() {
         <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-ink-soft/10 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-ink-soft/10 px-3 py-2">
             <span className="text-sm font-semibold text-ink">Notifications</span>
-            {unreadCount > 0 && (
-              <button type="button" onClick={handleMarkAllRead} className="text-xs text-brand-blue hover:underline">
-                Mark all read
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={loading}
+                aria-label="Refresh"
+                title="Refresh"
+                className={TOOLBAR_BUTTON_CLASS}
+              >
+                <IconRefresh className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
-            )}
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                disabled={unreadCount === 0}
+                aria-label="Mark all as read"
+                title="Mark all as read"
+                className={TOOLBAR_BUTTON_CLASS}
+              >
+                <IconEnvelope className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAll}
+                disabled={!notifications?.length}
+                aria-label="Delete all"
+                title="Delete all"
+                className={TOOLBAR_BUTTON_CLASS}
+              >
+                <IconTrash className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <ul className="max-h-96 overflow-y-auto">
             {loading && <li className="px-3 py-4 text-sm text-ink-soft">Loading…</li>}
