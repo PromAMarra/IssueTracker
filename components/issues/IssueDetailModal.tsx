@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faClock, faClockRotateLeft, faComment, faPaperclip, faXmark } from '@fortawesome/free-solid-svg-icons';
 import {
   addComment,
   getIssueDetail,
@@ -14,6 +16,7 @@ import {
 } from '@/app/actions/issues';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
+import { CollapsibleSection } from './CollapsibleSection';
 import { statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
@@ -156,10 +159,14 @@ export function IssueDetailModal({
             <span className="font-mono text-xs text-ink-soft">
               {issue.key} · Reported by {reporterName} on {new Date(issue.created_at).toLocaleDateString('en-GB')}
             </span>
-            <h2 className="text-lg font-semibold text-ink">{issue.title}</h2>
+            <h2 className="text-lg font-bold text-ink">{issue.title}</h2>
           </div>
-          <button onClick={close} className="text-ink-soft hover:text-ink" aria-label="Close">
-            ✕
+          <button
+            onClick={close}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink"
+            aria-label="Close"
+          >
+            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
           </button>
         </div>
 
@@ -261,8 +268,7 @@ export function IssueDetailModal({
           </div>
         )}
 
-        <section className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold text-ink">Attachments</h3>
+        <CollapsibleSection title="Attachments" icon={faPaperclip}>
           <ul className="mb-2 flex flex-col gap-1">
             {attachments.map((a) => (
               <li key={a.id}>
@@ -274,10 +280,9 @@ export function IssueDetailModal({
             {attachments.length === 0 && <li className="text-sm text-ink-soft">No attachments.</li>}
           </ul>
           <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
-        </section>
+        </CollapsibleSection>
 
-        <section className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold text-ink">Comments</h3>
+        <CollapsibleSection title="Comments" icon={faComment}>
           <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (
               <li
@@ -286,15 +291,21 @@ export function IssueDetailModal({
                   c.authorIsProm ? 'border-brand-green bg-brand-green/5' : 'border-brand-blue bg-brand-blue/5'
                 }`}
               >
-                <span className="font-medium text-ink">{c.authorName}</span>{' '}
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                    c.authorIsProm ? 'bg-brand-green/15 text-brand-green' : 'bg-brand-blue/15 text-brand-blue'
-                  }`}
-                >
-                  {c.authorIsProm ? 'Prometeia' : 'Bank'}
-                </span>{' '}
-                <span className="font-mono text-xs text-ink-soft">{new Date(c.createdAt).toLocaleString('en-GB')}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <span>
+                    <span className="font-medium text-ink">{c.authorName}</span>{' '}
+                    <span className="font-mono text-xs text-ink-soft">
+                      {new Date(c.createdAt).toLocaleString('en-GB')}
+                    </span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      c.authorIsProm ? 'bg-brand-green/15 text-brand-green' : 'bg-brand-blue/15 text-brand-blue'
+                    }`}
+                  >
+                    {c.authorIsProm ? 'Prometeia' : 'Bank'}
+                  </span>
+                </div>
                 <p className="text-ink">{c.body}</p>
                 {c.attachments.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -352,10 +363,9 @@ export function IssueDetailModal({
               />
             </label>
           </form>
-        </section>
+        </CollapsibleSection>
 
-        <section className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold text-ink">Time in status</h3>
+        <CollapsibleSection title="Time in status" icon={faClock}>
           <ul className="flex flex-col gap-1 text-sm">
             {STATUSES.map((s) => (
               <li key={s} className="flex justify-between">
@@ -364,10 +374,9 @@ export function IssueDetailModal({
               </li>
             ))}
           </ul>
-        </section>
+        </CollapsibleSection>
 
-        <section>
-          <h3 className="mb-2 text-sm font-semibold text-ink">History</h3>
+        <CollapsibleSection title="History" icon={faClockRotateLeft}>
           <ul className="flex flex-col gap-1">
             {history.map((h) => (
               <li key={h.id} className="text-xs text-ink-soft">
@@ -378,7 +387,7 @@ export function IssueDetailModal({
             ))}
             {history.length === 0 && <li className="text-xs text-ink-soft">No changes yet.</li>}
           </ul>
-        </section>
+        </CollapsibleSection>
       </div>
     </div>
   );
