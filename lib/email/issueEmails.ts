@@ -47,11 +47,11 @@ export function issueKeyPrefix(key: string): string {
 
 /**
  * Deep link to the ticket, matching NotificationBell's in-app route. Returns
- * null when NEXT_PUBLIC_SITE_URL is unset, in which case the email carries the
+ * null when SITE_URL is unset, in which case the email carries the
  * ticket key and title but no link (rather than a broken relative URL).
  */
 export function issueUrl(ctx: IssueEmailContext): string | null {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const base = process.env.SITE_URL?.trim();
   if (!base) return null;
   return `${base.replace(/\/+$/, '')}/${ctx.engagementId}/board?issue=${ctx.issueId}`;
 }

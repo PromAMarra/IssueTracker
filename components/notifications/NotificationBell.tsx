@@ -85,7 +85,7 @@ export function NotificationBell() {
         type="button"
         onClick={toggleOpen}
         aria-label="Notifications"
-        className="relative rounded-full p-2 text-ink-soft hover:bg-surface hover:text-ink"
+        className="relative rounded-full p-2 text-ink-soft hover:bg-primary-soft hover:text-ink"
       >
         🔔
         {unreadCount > 0 && (
@@ -115,7 +115,7 @@ export function NotificationBell() {
                   <button
                     type="button"
                     onClick={() => handleSelect(n)}
-                    className={`flex w-full flex-col gap-0.5 border-b border-ink-soft/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-surface ${
+                    className={`flex w-full flex-col gap-0.5 border-b border-ink-soft/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-primary-soft ${
                       n.readAt ? 'text-ink-soft' : 'font-medium text-ink'
                     }`}
                   >

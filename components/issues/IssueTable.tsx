@@ -224,7 +224,7 @@ export function IssueTable({
           type="button"
           onClick={handleExport}
           disabled={rows.length === 0}
-          className="ml-auto rounded-md border border-ink-soft/30 px-3 py-1 text-sm font-medium text-ink hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="ml-auto rounded-md border border-ink-soft/30 px-3 py-1 text-sm font-medium text-ink hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
           Export to Excel
         </button>
@@ -256,7 +256,7 @@ export function IssueTable({
           </thead>
           <tbody>
             {rows.map((issue) => (
-              <tr key={issue.id} className="border-b border-ink-soft/5 last:border-0 hover:bg-surface">
+              <tr key={issue.id} className="border-b border-ink-soft/5 last:border-0 hover:bg-primary-soft">
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-ink-soft">{issue.key}</td>
                 <td className="px-3 py-2">
                   <Link href={`?issue=${issue.id}`} scroll={false} className="text-ink hover:underline">

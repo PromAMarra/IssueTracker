@@ -166,7 +166,7 @@ export function IssueDetailModal({
         <p className="mb-4 whitespace-pre-wrap text-sm text-ink">{issue.description}</p>
 
         {(issue.test_case_package || issue.test_case_step) && (
-          <div className="mb-4 flex flex-col gap-1 rounded border border-ink-soft/10 bg-surface p-3 text-sm">
+          <div className="mb-4 flex flex-col gap-1 rounded border border-ink-soft/10 bg-brand-gray-light p-3 text-sm">
             {issue.test_case_package && (
               <p>
                 <span className="font-medium text-ink">Test case package:</span>{' '}

@@ -37,7 +37,7 @@ export function BankLogoUploader({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={preview} alt="Bank logo" className="h-12 max-w-[160px] object-contain" />
       )}
-      <label className="cursor-pointer rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink hover:bg-white">
+      <label className="cursor-pointer rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink hover:bg-primary-soft">
         {uploading ? 'Uploading…' : 'Upload bank logo'}
         <input type="file" accept="image/*" onChange={handleChange} className="hidden" disabled={uploading} />
       </label>

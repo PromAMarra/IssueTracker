@@ -18,17 +18,17 @@ const ctx: IssueEmailContext = {
   title: 'Rate table rounds to 2 decimals',
 };
 
-const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const originalSiteUrl = process.env.SITE_URL;
 
 beforeEach(() => {
-  delete process.env.NEXT_PUBLIC_SITE_URL;
+  delete process.env.SITE_URL;
 });
 
 afterEach(() => {
   if (originalSiteUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_SITE_URL;
+    delete process.env.SITE_URL;
   } else {
-    process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
+    process.env.SITE_URL = originalSiteUrl;
   }
 });
 
@@ -44,17 +44,17 @@ describe('issueKeyPrefix', () => {
 });
 
 describe('issueUrl', () => {
-  it('is null when NEXT_PUBLIC_SITE_URL is unset', () => {
+  it('is null when SITE_URL is unset', () => {
     expect(issueUrl(ctx)).toBeNull();
   });
 
   it('builds the same deep link the in-app bell uses', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://tracker.example.com';
+    process.env.SITE_URL = 'https://tracker.example.com';
     expect(issueUrl(ctx)).toBe('https://tracker.example.com/engagement-uuid/board?issue=issue-uuid');
   });
 
   it('tolerates a trailing slash on the configured base URL', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://tracker.example.com/';
+    process.env.SITE_URL = 'https://tracker.example.com/';
     expect(issueUrl(ctx)).toBe('https://tracker.example.com/engagement-uuid/board?issue=issue-uuid');
   });
 });
@@ -83,7 +83,7 @@ describe('email content', () => {
   });
 
   it('includes the link when a site URL is configured', () => {
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://tracker.example.com';
+    process.env.SITE_URL = 'https://tracker.example.com';
     expect(issueAssignedEmail(ctx).body).toContain(
       'View the ticket: https://tracker.example.com/engagement-uuid/board?issue=issue-uuid',
     );
