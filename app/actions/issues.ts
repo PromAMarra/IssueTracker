@@ -113,7 +113,9 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   // survive into the callback below.
   const notifyAssigneeId = assigneeId;
   if (notifyAssigneeId) {
-    await notifyByEmail(() =>
+    // Fire-and-forget: see notifyByEmail's doc comment for why this must
+    // not be awaited.
+    notifyByEmail(() =>
       emailIssueAssigned(
         supabase,
         { issueId, engagementId: input.engagementId, key: keyData as string, title },
@@ -199,7 +201,9 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   const reporterId = current.reporter_id as string;
   if (newStatus !== current.status) {
     const label = statusEmailLabel(newStatus, isReopen);
-    await notifyByEmail(async () => {
+    // Fire-and-forget: see notifyByEmail's doc comment for why this must
+    // not be awaited.
+    notifyByEmail(async () => {
       const recipientIds = statusChangedEmailRecipientIds({
         reporterId,
         assigneeId: isClosing ? null : current.assignee_id,
@@ -266,6 +270,26 @@ async function profileName(
  * The mutation is already committed by the time this runs, so neither the
  * extra profile lookups (which can throw) nor the send itself may turn a
  * successful mutation into an error for the user.
+ *
+ * Every call site fires this WITHOUT `await`, on purpose: this function
+ * always resolves cleanly (it catches everything below, and
+ * `sendNotificationEmail` never throws either — see its own doc comment and
+ * its internal 5s timeout), so there is zero risk of an unhandled promise
+ * rejection. Awaiting it would only make the user's click sit through an
+ * external Resend HTTP round-trip (typically hundreds of ms, up to the 5s
+ * timeout) before the Server Action can return and `revalidatePath` the UI.
+ * Do not add `await` back at a call site — that would reintroduce exactly
+ * the click-to-response lag this was written to avoid.
+ *
+ * We don't reach for `next/server`'s `after()` here — it isn't available in
+ * the installed Next 14.2.35 — or a Vercel-specific `waitUntil`, which would
+ * tie this codebase to one hosting platform. Plain fire-and-forget, bounded
+ * by the internal 5s send timeout, is the portable choice; the honest
+ * tradeoff is that a platform which freezes/tears down a function right
+ * after its response is sent could in rare cases cut off a send that hadn't
+ * finished yet — acceptable here since a dropped notification email never
+ * loses data (the in-app notification and the underlying mutation are
+ * unaffected).
  */
 async function notifyByEmail(run: () => Promise<void>): Promise<void> {
   try {
@@ -327,7 +351,9 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
   const notifyAssigneeId =
     newAssigneeId && newAssigneeId !== current.assignee_id ? newAssigneeId : null;
   if (notifyAssigneeId) {
-    await notifyByEmail(() =>
+    // Fire-and-forget: see notifyByEmail's doc comment for why this must
+    // not be awaited.
+    notifyByEmail(() =>
       emailIssueAssigned(
         supabase,
         {
@@ -378,7 +404,9 @@ export async function addComment(issueId: string, body: string): Promise<string>
 
   // Everyone on the ticket, the author included — the same set the
   // `comments_notify_participants` trigger notifies in-app.
-  await notifyByEmail(async () => {
+  // Fire-and-forget: see notifyByEmail's doc comment for why this must not
+  // be awaited.
+  notifyByEmail(async () => {
     const { data: issue, error: issueError } = await supabase
       .from('issues')
       .select('engagement_id, key, title, reporter_id, assignee_id')
