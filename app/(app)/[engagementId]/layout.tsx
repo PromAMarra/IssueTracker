@@ -3,6 +3,8 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listAccessibleEngagements } from '@/lib/data/engagements';
 import { getPlatformSettings } from '@/lib/data/settings';
 import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 export default async function EngagementLayout({
   children,
@@ -22,14 +24,20 @@ export default async function EngagementLayout({
   if (!engagement) notFound();
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="flex min-h-screen flex-col bg-surface">
       <Header
         profile={session.profile}
         engagements={engagements}
         current={engagement}
         prometeiaLogoUrl={platformSettings.prometeiaLogoUrl}
       />
-      <main className="px-6 py-6">{children}</main>
+      <div className="flex flex-1 flex-col md:flex-row">
+        <Sidebar engagementId={engagement.id} isProm={session.profile.is_prometeia} />
+        <main className="min-w-0 flex-1 px-6 py-6">
+          <Breadcrumbs engagementId={engagement.id} />
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
