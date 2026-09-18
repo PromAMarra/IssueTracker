@@ -252,8 +252,18 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
     newHistory.push(await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id));
   }
 
-  revalidatePath(`/${current.engagement_id}/board`);
-  revalidatePath(`/${current.engagement_id}/list`);
+  // Deliberately NOT revalidatePath-ing /board or /list here: on Next 14,
+  // revalidatePath on a Server Action's own current route forces that same
+  // response to embed a full fresh re-render of it (re-running
+  // listIssues/listHistoryForEngagement for the whole engagement) regardless
+  // of whether the client calls router.refresh() — this is exactly the
+  // full-engagement refetch-per-edit cost this change exists to remove.
+  // Both routes already render dynamically (createServerClient() calls
+  // cookies()), so there's no stale server cache to invalidate here in the
+  // first place; the caller's own local optimistic patch (see Board.tsx /
+  // IssueTable.tsx) handles the immediate UI update instead. /dashboard is
+  // never the route this action is called from, so revalidating it costs
+  // nothing extra and keeps that page's cache entry honest.
   revalidatePath(`/${current.engagement_id}/dashboard`);
 
   // Email the reporter and, for a non-closing change, the assignee — only on
@@ -321,8 +331,8 @@ export async function updateIssuePriority(issueId: string, newPriority: Priority
   if (!updated) throw new Error(CONFLICT_MESSAGE);
 
   const newHistory = [await recordHistory(supabase, issueId, 'priority', current.priority, newPriority, session.id)];
-  revalidatePath(`/${current.engagement_id}/board`);
-  revalidatePath(`/${current.engagement_id}/list`);
+  // See updateIssueStatus for why /board and /list are deliberately not
+  // revalidated here.
   revalidatePath(`/${current.engagement_id}/dashboard`);
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
@@ -431,8 +441,8 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
     profileName(supabase, newAssigneeId),
   ]);
   const newHistory = [await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id)];
-  revalidatePath(`/${current.engagement_id}/board`);
-  revalidatePath(`/${current.engagement_id}/list`);
+  // See updateIssueStatus for why /board and /list are deliberately not
+  // revalidated here (this function never revalidated /dashboard either).
 
   // Same condition as the `issues_notify_assigned` trigger: a real assignee
   // (un-assigning emails nobody) that actually changed. The trigger's
@@ -481,8 +491,8 @@ export async function updateIssueModule(issueId: string, newModule: string | nul
   const newHistory = [
     await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id),
   ];
-  revalidatePath(`/${current.engagement_id}/board`);
-  revalidatePath(`/${current.engagement_id}/list`);
+  // See updateIssueStatus for why /board and /list are deliberately not
+  // revalidated here.
   revalidatePath(`/${current.engagement_id}/dashboard`);
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
