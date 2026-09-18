@@ -34,7 +34,11 @@ Resolved with the user before writing this spec:
 3. **Engagement picker**: stays in the top bar, next to the user identity
    block (unchanged from today's placement) — the reference has no
    equivalent concept, so there's nothing to align to here.
-4. **Phasing**: this spec covers **Phase 1 (shell only)** — top bar, sidebar,
+4. **Sidebar color**: dark (ink-navy), matching the reference's most
+   recognizable trait — confirmed against a working mock with a live
+   light/dark toggle, built from this app's own existing tokens (see
+   Architecture > Sidebar below), not new colors.
+5. **Phasing**: this spec covers **Phase 1 (shell only)** — top bar, sidebar,
    breadcrumbs. Rolling the card-based content pattern into the Board, List,
    Dashboard, and Settings pages themselves is **Phase 2**, out of scope
    here, to be brainstormed and approved separately once Phase 1 has shipped
@@ -89,6 +93,12 @@ A new `AppShell`-style composition inside `app/(app)/[engagementId]/layout.tsx`:
   implementation — if none exists yet, a simple below-768px full-width stack
   is the fallback, consistent with DESIGN.md's documented collapsing
   strategy).
+  - **Color, resolved via mock**: dark ink-navy background, built entirely
+    from tokens already in `tailwind.config.ts` — no new colors added.
+    `bg-ink` for the sidebar background; inactive nav-item text
+    `text-primary-soft/70`; active nav item `bg-white/10 text-white`; active
+    item's icon accent `text-brand-green`. This mirrors the reference's dark
+    sidebar without touching DESIGN.md's palette.
 - **Breadcrumbs** (new `components/Breadcrumbs.tsx`): static per top-level
   page — "Home / Board", "Home / List", "Home / Dashboard", "Home /
   Settings" — no breadcrumb-context system needed, since none of these pages
