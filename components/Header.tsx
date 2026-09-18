@@ -1,6 +1,5 @@
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { EngagementPicker } from '@/components/EngagementPicker';
-import { NavTabs } from '@/components/NavTabs';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import type { Engagement, EngagementSummary } from '@/lib/data/engagements';
 import type { Profile } from '@/lib/auth/session';
@@ -49,7 +48,6 @@ export function Header({
           <LogoutButton />
         </div>
       </div>
-      <NavTabs engagementId={current.id} isProm={profile.is_prometeia} />
     </header>
   );
 }
