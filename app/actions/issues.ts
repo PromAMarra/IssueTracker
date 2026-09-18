@@ -132,6 +132,57 @@ async function requireProm() {
   return session;
 }
 
+export type IssueFieldsPatch = {
+  status: Status;
+  priority: Priority;
+  module: string | null;
+  assignee_id: string | null;
+  assigneeName: string | null;
+  closed_at: string | null;
+  updated_at: string;
+};
+
+export type HistoryPatchEntry = {
+  id: string;
+  issue_id: string;
+  field: string;
+  from_value: string | null;
+  to_value: string;
+  changed_by: string;
+  changed_at: string;
+};
+
+export type MutationResult = {
+  patch: IssueFieldsPatch;
+  newHistory: HistoryPatchEntry[];
+};
+
+// Selected after every field mutation so the caller can patch its local copy
+// of the issue directly instead of asking Board/IssueTable to re-fetch the
+// whole engagement's issue list.
+const ISSUE_PATCH_SELECT =
+  'status, priority, module, assignee_id, closed_at, updated_at, assignee:profiles!assignee_id(full_name, email)';
+
+function toIssueFieldsPatch(row: unknown): IssueFieldsPatch {
+  // Supabase's query-builder types this embedded `assignee:profiles!...`
+  // select as an array by default (no generated Database types in this
+  // project to tell it the relationship is many-to-one) even though a
+  // single row's foreign key can only ever join one profile — the same
+  // `as unknown as ...` cast pattern used throughout lib/data/issues.ts.
+  const { assignee, ...rest } = row as {
+    status: Status;
+    priority: Priority;
+    module: string | null;
+    assignee_id: string | null;
+    closed_at: string | null;
+    updated_at: string;
+    assignee: { full_name: string | null; email: string } | null;
+  };
+  return { ...rest, assigneeName: assignee ? assignee.full_name ?? assignee.email : null };
+}
+
+const CONFLICT_MESSAGE = 'This ticket changed since you loaded it. Please refresh and try again.';
+
 async function recordHistory(
   supabase: ReturnType<typeof createServerClient>,
   issueId: string,
@@ -139,14 +190,17 @@ async function recordHistory(
   fromValue: string | null,
   toValue: string,
   changedBy: string,
-) {
-  const { error } = await supabase
+): Promise<HistoryPatchEntry> {
+  const { data, error } = await supabase
     .from('issue_history')
-    .insert({ issue_id: issueId, field, from_value: fromValue, to_value: toValue, changed_by: changedBy });
+    .insert({ issue_id: issueId, field, from_value: fromValue, to_value: toValue, changed_by: changedBy })
+    .select('id, issue_id, field, from_value, to_value, changed_by, changed_at')
+    .single();
   if (error) throw error;
+  return data as HistoryPatchEntry;
 }
 
-export async function updateIssueStatus(issueId: string, newStatus: Status) {
+export async function updateIssueStatus(issueId: string, newStatus: Status): Promise<MutationResult> {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -169,17 +223,33 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
   // could already do manually, just automatic now.
   if (isClosing) patch.assignee_id = current.reporter_id;
 
-  const { error } = await supabase.from('issues').update(patch).eq('id', issueId);
+  // Optimistic-concurrency guard: only commit if status (and, when closing,
+  // assignee_id) still match what we just read. Otherwise someone else's
+  // concurrent edit landed in between — e.g. one person closing a ticket
+  // while another reassigns it — and blindly writing here would silently
+  // discard their change and log a history row against a from-value that's
+  // no longer true. Fail loudly instead of corrupting the audit trail.
+  let query = supabase.from('issues').update(patch).eq('id', issueId).eq('status', current.status);
+  if (isClosing) {
+    query =
+      current.assignee_id === null
+        ? query.is('assignee_id', null)
+        : query.eq('assignee_id', current.assignee_id);
+  }
+  const { data: updated, error } = await query.select(ISSUE_PATCH_SELECT).maybeSingle();
   if (error) throw error;
+  if (!updated) throw new Error(CONFLICT_MESSAGE);
 
-  await recordHistory(supabase, issueId, 'status', current.status, isReopen ? 'reopened' : newStatus, session.id);
+  const newHistory: HistoryPatchEntry[] = [
+    await recordHistory(supabase, issueId, 'status', current.status, isReopen ? 'reopened' : newStatus, session.id),
+  ];
 
   if (isClosing && current.assignee_id !== current.reporter_id) {
     const [fromName, toName] = await Promise.all([
       profileName(supabase, current.assignee_id),
       profileName(supabase, current.reporter_id),
     ]);
-    await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id);
+    newHistory.push(await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id));
   }
 
   revalidatePath(`/${current.engagement_id}/board`);
@@ -225,9 +295,11 @@ export async function updateIssueStatus(issueId: string, newStatus: Status) {
       );
     });
   }
+
+  return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
-export async function updateIssuePriority(issueId: string, newPriority: Priority) {
+export async function updateIssuePriority(issueId: string, newPriority: Priority): Promise<MutationResult> {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -237,12 +309,22 @@ export async function updateIssuePriority(issueId: string, newPriority: Priority
     .single();
   if (fetchError) throw fetchError;
 
-  const { error } = await supabase.from('issues').update({ priority: newPriority }).eq('id', issueId);
+  // Optimistic-concurrency guard — see updateIssueStatus for why.
+  const { data: updated, error } = await supabase
+    .from('issues')
+    .update({ priority: newPriority })
+    .eq('id', issueId)
+    .eq('priority', current.priority)
+    .select(ISSUE_PATCH_SELECT)
+    .maybeSingle();
   if (error) throw error;
-  await recordHistory(supabase, issueId, 'priority', current.priority, newPriority, session.id);
+  if (!updated) throw new Error(CONFLICT_MESSAGE);
+
+  const newHistory = [await recordHistory(supabase, issueId, 'priority', current.priority, newPriority, session.id)];
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
   revalidatePath(`/${current.engagement_id}/dashboard`);
+  return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
 async function profileName(
@@ -322,7 +404,7 @@ async function emailIssueAssigned(
   await sendNotificationEmail({ to, subject, body });
 }
 
-export async function updateIssueAssignee(issueId: string, newAssigneeId: string | null) {
+export async function updateIssueAssignee(issueId: string, newAssigneeId: string | null): Promise<MutationResult> {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -332,14 +414,23 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
     .single();
   if (fetchError) throw fetchError;
 
-  const { error } = await supabase.from('issues').update({ assignee_id: newAssigneeId }).eq('id', issueId);
+  // Optimistic-concurrency guard — see updateIssueStatus for why. This also
+  // closes the other half of the close-vs-reassign race: if someone else's
+  // status-close already flipped assignee_id (e.g. handing it back to the
+  // reporter) since we read it, this update won't match and we surface a
+  // conflict instead of silently overwriting their change.
+  let query = supabase.from('issues').update({ assignee_id: newAssigneeId }).eq('id', issueId);
+  query =
+    current.assignee_id === null ? query.is('assignee_id', null) : query.eq('assignee_id', current.assignee_id);
+  const { data: updated, error } = await query.select(ISSUE_PATCH_SELECT).maybeSingle();
   if (error) throw error;
+  if (!updated) throw new Error(CONFLICT_MESSAGE);
 
   const [fromName, toName] = await Promise.all([
     profileName(supabase, current.assignee_id),
     profileName(supabase, newAssigneeId),
   ]);
-  await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id);
+  const newHistory = [await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id)];
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
 
@@ -366,9 +457,11 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
       ),
     );
   }
+
+  return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
-export async function updateIssueModule(issueId: string, newModule: string | null) {
+export async function updateIssueModule(issueId: string, newModule: string | null): Promise<MutationResult> {
   const session = await requireProm();
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -378,12 +471,20 @@ export async function updateIssueModule(issueId: string, newModule: string | nul
     .single();
   if (fetchError) throw fetchError;
 
-  const { error } = await supabase.from('issues').update({ module: newModule }).eq('id', issueId);
+  // Optimistic-concurrency guard — see updateIssueStatus for why.
+  let query = supabase.from('issues').update({ module: newModule }).eq('id', issueId);
+  query = current.module === null ? query.is('module', null) : query.eq('module', current.module);
+  const { data: updated, error } = await query.select(ISSUE_PATCH_SELECT).maybeSingle();
   if (error) throw error;
-  await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id);
+  if (!updated) throw new Error(CONFLICT_MESSAGE);
+
+  const newHistory = [
+    await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id),
+  ];
   revalidatePath(`/${current.engagement_id}/board`);
   revalidatePath(`/${current.engagement_id}/list`);
   revalidatePath(`/${current.engagement_id}/dashboard`);
+  return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
 export async function addComment(issueId: string, body: string): Promise<string> {

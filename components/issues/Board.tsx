@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
-import { updateIssueAssignee, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
+import { updateIssueAssignee, updateIssuePriority, updateIssueStatus, type MutationResult } from '@/app/actions/issues';
 import { STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
 import type { IssueWithNames } from '@/lib/data/issues';
@@ -22,7 +22,7 @@ const COLUMN_LABELS: Record<Status, string> = {
 const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
 
 export function Board({
-  issues,
+  issues: initialIssues,
   teamMembers,
   isProm,
 }: {
@@ -31,15 +31,39 @@ export function Board({
   isProm: boolean;
 }) {
   const router = useRouter();
+  const [issues, setIssues] = useState(initialIssues);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(issueId: string, action: () => Promise<void>) {
+  // A real navigation/reload gives us a fresh server-fetched array — resync
+  // to it rather than keep patching indefinitely on top of a stale base.
+  useEffect(() => {
+    setIssues(initialIssues);
+  }, [initialIssues]);
+
+  // Quick edits below patch just the one changed issue locally instead of
+  // re-fetching the whole engagement (see the perf/concurrency review this
+  // fixes: every micro-edit was forcing an unbounded, unpaginated
+  // listIssues()+listHistoryForEngagement() re-fetch for the entire
+  // engagement). That trades away one thing the old router.refresh()-per-edit
+  // incidentally provided: picking up *other* users' concurrent changes.
+  // Refreshing when the tab regains focus covers the common case — coming
+  // back to a board after being away — without paying the full re-fetch cost
+  // on every keystroke-equivalent local edit.
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') router.refresh();
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [router]);
+
+  async function run(issueId: string, action: () => Promise<MutationResult>) {
     setPendingId(issueId);
     setError(null);
     try {
-      await action();
-      router.refresh();
+      const { patch } = await action();
+      setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...patch } : i)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {

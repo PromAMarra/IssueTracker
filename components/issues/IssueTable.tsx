@@ -1,11 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
-import { updateIssueAssignee, updateIssueModule, updateIssuePriority, updateIssueStatus } from '@/app/actions/issues';
+import {
+  updateIssueAssignee,
+  updateIssueModule,
+  updateIssuePriority,
+  updateIssueStatus,
+  type MutationResult,
+} from '@/app/actions/issues';
 import { reopenFromReadyForTestCount, statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { IssueHistoryEntry, Org, Priority, Status } from '@/lib/types';
@@ -61,11 +67,11 @@ function formatDuration(days: number): string {
 }
 
 export function IssueTable({
-  issues,
+  issues: initialIssues,
   modules,
   teamMembers,
   isProm,
-  history,
+  history: initialHistory,
 }: {
   issues: IssueWithNames[];
   modules: string[];
@@ -74,6 +80,8 @@ export function IssueTable({
   history: IssueHistoryEntry[];
 }) {
   const router = useRouter();
+  const [issues, setIssues] = useState(initialIssues);
+  const [history, setHistory] = useState(initialHistory);
   const [statusFilter, setStatusFilter] = useState<Status | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [moduleFilter, setModuleFilter] = useState('');
@@ -125,12 +133,39 @@ export function IssueTable({
     }
   }
 
-  async function run(issueId: string, action: () => Promise<void>) {
+  // A real navigation/reload gives us fresh server-fetched arrays — resync
+  // to them rather than keep patching indefinitely on top of a stale base.
+  useEffect(() => {
+    setIssues(initialIssues);
+  }, [initialIssues]);
+  useEffect(() => {
+    setHistory(initialHistory);
+  }, [initialHistory]);
+
+  // Quick edits below patch just the one changed issue (and append its new
+  // history row) locally instead of re-fetching the whole engagement's
+  // issues + history (see the perf/concurrency review this fixes: every
+  // micro-edit was forcing an unbounded, unpaginated
+  // listIssues()+listHistoryForEngagement() re-fetch). That trades away one
+  // thing the old router.refresh()-per-edit incidentally provided: picking
+  // up *other* users' concurrent changes. Refreshing when the tab regains
+  // focus covers the common case — coming back to this view after being
+  // away — without paying the full re-fetch cost on every local edit.
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') router.refresh();
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [router]);
+
+  async function run(issueId: string, action: () => Promise<MutationResult>) {
     setPendingId(issueId);
     setError(null);
     try {
-      await action();
-      router.refresh();
+      const { patch, newHistory } = await action();
+      setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...patch } : i)));
+      setHistory((prev) => [...prev, ...newHistory]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {

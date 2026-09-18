@@ -82,7 +82,7 @@ export function IssueDetailModal({
     router.refresh();
   }
 
-  async function handleField(action: () => Promise<void>) {
+  async function handleField(action: () => Promise<unknown>) {
     setBusy(true);
     setError(null);
     try {
