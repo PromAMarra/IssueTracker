@@ -570,7 +570,7 @@ export async function listComments(issueId: string): Promise<CommentRow[]> {
     .from('issue_comments')
     .select('id, body, created_at, profiles(full_name, email, is_prometeia)')
     .eq('issue_id', issueId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (
     data as unknown as {
