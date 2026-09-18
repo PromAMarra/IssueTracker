@@ -59,7 +59,9 @@ export function Sidebar({ engagementId, isProm }: { engagementId: string; isProm
         onClick={toggleCollapsed}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="mb-2 hidden h-9 items-center px-4 text-primary-soft/70 hover:text-white md:flex md:justify-center md:px-0"
+        className={`mb-2 hidden h-9 items-center px-4 text-primary-soft/70 hover:text-white md:flex ${
+          collapsed ? 'md:justify-center md:px-0' : ''
+        }`}
       >
         <IconMenu2 className="h-5 w-5 shrink-0" stroke={1.5} />
       </button>
