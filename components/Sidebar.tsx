@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartLine, faGear, faList, faTableColumns, type IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { IconChartLine, IconLayoutKanban, IconList, IconSettings, type Icon } from '@tabler/icons-react';
 import { activeNavSection, NAV_SECTIONS, type NavSectionKey } from '@/lib/navSections';
 
-const ICONS: Record<NavSectionKey, IconDefinition> = {
-  board: faTableColumns,
-  list: faList,
-  dashboard: faChartLine,
-  settings: faGear,
+const ICONS: Record<NavSectionKey, Icon> = {
+  board: IconLayoutKanban,
+  list: IconList,
+  dashboard: IconChartLine,
+  settings: IconSettings,
 };
 
 export function Sidebar({ engagementId, isProm }: { engagementId: string; isProm: boolean }) {
@@ -22,6 +21,7 @@ export function Sidebar({ engagementId, isProm }: { engagementId: string; isProm
     <nav className="flex w-full shrink-0 flex-col gap-1 bg-ink py-3 md:w-56">
       {sections.map((section) => {
         const isActive = section.key === active;
+        const SectionIcon = ICONS[section.key];
         return (
           <Link
             key={section.key}
@@ -33,7 +33,7 @@ export function Sidebar({ engagementId, isProm }: { engagementId: string; isProm
                 : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <FontAwesomeIcon icon={ICONS[section.key]} className="h-4 w-4" />
+            <SectionIcon className="h-4 w-4" stroke={1.5} />
             {section.label}
           </Link>
         );
