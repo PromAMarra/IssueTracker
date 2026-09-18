@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRotateRight, faBell, faEnvelope, faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { IconBell, IconMail, IconRefresh, IconTrash, IconX } from '@tabler/icons-react';
 import {
   deleteNotifications,
   getUnreadNotificationCount,
@@ -137,7 +136,7 @@ export function NotificationBell() {
         aria-label="Notifications"
         className="relative rounded-full p-2 text-ink-soft hover:bg-primary-soft hover:text-ink"
       >
-        <FontAwesomeIcon icon={faBell} className="h-4 w-4" />
+        <IconBell className="h-4 w-4" stroke={1.5} />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -161,7 +160,7 @@ export function NotificationBell() {
                   title="Refresh"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
-                  <FontAwesomeIcon icon={faArrowRotateRight} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  <IconRefresh className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} stroke={1.5} />
                 </button>
                 <button
                   type="button"
@@ -171,7 +170,7 @@ export function NotificationBell() {
                   title="Mark all as read"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
-                  <FontAwesomeIcon icon={faEnvelope} className="h-4 w-4" />
+                  <IconMail className="h-4 w-4" stroke={1.5} />
                 </button>
                 <button
                   type="button"
@@ -181,7 +180,7 @@ export function NotificationBell() {
                   title="Delete selected"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
-                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                  <IconTrash className="h-4 w-4" stroke={1.5} />
                 </button>
                 <button
                   type="button"
@@ -190,7 +189,7 @@ export function NotificationBell() {
                   title="Close"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
-                  <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+                  <IconX className="h-4 w-4" stroke={1.5} />
                 </button>
               </div>
             </div>

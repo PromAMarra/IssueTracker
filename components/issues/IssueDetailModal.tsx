@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClock, faClockRotateLeft, faComment, faPaperclip, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { IconClock, IconHistory, IconMessage, IconPaperclip, IconX } from '@tabler/icons-react';
 import {
   addComment,
   getIssueDetail,
@@ -166,7 +165,7 @@ export function IssueDetailModal({
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink"
             aria-label="Close"
           >
-            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+            <IconX className="h-4 w-4" stroke={1.5} />
           </button>
         </div>
 
@@ -268,7 +267,7 @@ export function IssueDetailModal({
           </div>
         )}
 
-        <CollapsibleSection title="Attachments" icon={faPaperclip}>
+        <CollapsibleSection title="Attachments" icon={IconPaperclip}>
           <ul className="mb-2 flex flex-col gap-1">
             {attachments.map((a) => (
               <li key={a.id}>
@@ -282,7 +281,7 @@ export function IssueDetailModal({
           <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Comments" icon={faComment}>
+        <CollapsibleSection title="Comments" icon={IconMessage}>
           <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (
               <li
@@ -365,7 +364,7 @@ export function IssueDetailModal({
           </form>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Time in status" icon={faClock}>
+        <CollapsibleSection title="Time in status" icon={IconClock}>
           <ul className="flex flex-col gap-1 text-sm">
             {STATUSES.filter((s) => s !== 'closed' && s !== 'rejected').map((s) => (
               <li key={s} className="flex justify-between">
@@ -376,7 +375,7 @@ export function IssueDetailModal({
           </ul>
         </CollapsibleSection>
 
-        <CollapsibleSection title="History" icon={faClockRotateLeft}>
+        <CollapsibleSection title="History" icon={IconHistory}>
           <ul className="flex flex-col gap-1">
             {history.map((h) => (
               <li key={h.id} className="text-xs text-ink-soft">
