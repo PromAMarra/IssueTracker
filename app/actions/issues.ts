@@ -252,19 +252,23 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
     newHistory.push(await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id));
   }
 
-  // Deliberately NOT revalidatePath-ing /board or /list here: on Next 14,
-  // revalidatePath on a Server Action's own current route forces that same
-  // response to embed a full fresh re-render of it (re-running
-  // listIssues/listHistoryForEngagement for the whole engagement) regardless
-  // of whether the client calls router.refresh() — this is exactly the
-  // full-engagement refetch-per-edit cost this change exists to remove.
-  // Both routes already render dynamically (createServerClient() calls
-  // cookies()), so there's no stale server cache to invalidate here in the
-  // first place; the caller's own local optimistic patch (see Board.tsx /
-  // IssueTable.tsx) handles the immediate UI update instead. /dashboard is
-  // never the route this action is called from, so revalidating it costs
-  // nothing extra and keeps that page's cache entry honest.
-  revalidatePath(`/${current.engagement_id}/dashboard`);
+  // Deliberately calling NO revalidatePath at all here (not even /dashboard):
+  // Next 14's `pathWasRevalidated` flag that gates a Server Action's
+  // same-response full re-render is a single, un-scoped boolean for the
+  // whole invocation — ANY revalidatePath call during this action, for ANY
+  // path, forces that embed of whichever route (/board or /list) actually
+  // called it, re-running listIssues/listHistoryForEngagement for the whole
+  // engagement regardless of client-side router.refresh(). A single
+  // /dashboard call here was tried and shown (by review) to still trigger
+  // this for /board and /list. All three routes already render dynamically
+  // (createServerClient() calls cookies()), so there's no real server cache
+  // being protected by calling this at all; the caller's own local
+  // optimistic patch (see Board.tsx/IssueTable.tsx) handles the immediate
+  // UI update, and their visibility-triggered router.refresh() (which always
+  // fetches fresh data on a dynamic route, Router Cache or not) is what
+  // keeps them eventually consistent. Dashboard can show up to its default
+  // client Router Cache staleness window of data lag if visited right after
+  // a quick edit elsewhere — an accepted, bounded tradeoff, not a bug.
 
   // Email the reporter and, for a non-closing change, the assignee — only on
   // a real status change (the `notify_status_changed` trigger's
@@ -331,9 +335,8 @@ export async function updateIssuePriority(issueId: string, newPriority: Priority
   if (!updated) throw new Error(CONFLICT_MESSAGE);
 
   const newHistory = [await recordHistory(supabase, issueId, 'priority', current.priority, newPriority, session.id)];
-  // See updateIssueStatus for why /board and /list are deliberately not
-  // revalidated here.
-  revalidatePath(`/${current.engagement_id}/dashboard`);
+  // See updateIssueStatus for why this deliberately calls no revalidatePath
+  // at all (not even for /dashboard).
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
@@ -441,8 +444,8 @@ export async function updateIssueAssignee(issueId: string, newAssigneeId: string
     profileName(supabase, newAssigneeId),
   ]);
   const newHistory = [await recordHistory(supabase, issueId, 'assignee', fromName, toName, session.id)];
-  // See updateIssueStatus for why /board and /list are deliberately not
-  // revalidated here (this function never revalidated /dashboard either).
+  // See updateIssueStatus for why this deliberately calls no revalidatePath
+  // at all (this function never revalidated /dashboard either, even before).
 
   // Same condition as the `issues_notify_assigned` trigger: a real assignee
   // (un-assigning emails nobody) that actually changed. The trigger's
@@ -491,9 +494,8 @@ export async function updateIssueModule(issueId: string, newModule: string | nul
   const newHistory = [
     await recordHistory(supabase, issueId, 'module', current.module, newModule ?? 'None', session.id),
   ];
-  // See updateIssueStatus for why /board and /list are deliberately not
-  // revalidated here.
-  revalidatePath(`/${current.engagement_id}/dashboard`);
+  // See updateIssueStatus for why this deliberately calls no revalidatePath
+  // at all (not even for /dashboard).
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
