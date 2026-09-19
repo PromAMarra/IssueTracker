@@ -9,6 +9,7 @@ export type NotificationRow = {
   id: string;
   type: NotificationType;
   message: string;
+  actorName: string;
   createdAt: string;
   readAt: string | null;
   issueId: string;
@@ -22,7 +23,9 @@ export async function listNotifications(limit = 30): Promise<NotificationRow[]> 
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('notifications')
-    .select('id, type, message, created_at, read_at, issue_id, issues(engagement_id, key)')
+    .select(
+      'id, type, message, created_at, read_at, issue_id, issues(engagement_id, key), actor:profiles!actor_id(full_name, email)',
+    )
     .eq('user_id', session.id)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -36,11 +39,15 @@ export async function listNotifications(limit = 30): Promise<NotificationRow[]> 
       read_at: string | null;
       issue_id: string;
       issues: { engagement_id: string; key: string };
+      actor: { full_name: string | null; email: string } | null;
     }[]
   ).map((row) => ({
     id: row.id,
     type: row.type,
     message: row.message,
+    // actor_id is nullable in the schema; every real trigger insert sets it
+    // to a real auth.uid(), so a missing actor is not expected in practice.
+    actorName: row.actor ? (row.actor.full_name ?? row.actor.email) : 'someone',
     createdAt: row.created_at,
     readAt: row.read_at,
     issueId: row.issue_id,

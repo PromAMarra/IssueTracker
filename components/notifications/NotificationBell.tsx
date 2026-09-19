@@ -232,10 +232,14 @@ export function NotificationBell() {
                     >
                       <span className="flex items-center gap-1.5">
                         {!n.readAt && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue" />}
-                        <span className="font-mono text-xs text-ink-soft">{n.issueKey}</span>
+                        <span className="font-mono text-xs font-bold text-ink-soft">{n.issueKey}</span>
                       </span>
-                      <span>{n.message}</span>
-                      <span className="text-xs text-ink-soft">{new Date(n.createdAt).toLocaleString('en-GB')}</span>
+                      <span>
+                        {n.message} — Action performed by <span className="font-bold">{n.actorName}</span>
+                      </span>
+                      <span className="text-xs font-normal text-ink-soft">
+                        {new Date(n.createdAt).toLocaleString('en-GB')}
+                      </span>
                     </button>
                   </li>
                 ))}
