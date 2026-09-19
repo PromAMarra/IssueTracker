@@ -25,6 +25,7 @@ export function NewIssueForm({
   testCaseStepOptions,
   teamMembers,
   onCreated,
+  initialTestCasePackage,
 }: {
   engagementId: string;
   modules: string[];
@@ -33,13 +34,16 @@ export function NewIssueForm({
   testCaseStepOptions: TestCaseStepOption[];
   teamMembers: TeamMember[];
   onCreated?: () => void;
+  initialTestCasePackage?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [module, setModule] = useState(modules[0] ?? '');
-  const [testCasePackage, setTestCasePackage] = useState(testCasesEnabled ? '' : (testCasePackages[0] ?? ''));
+  const [testCasePackage, setTestCasePackage] = useState(
+    initialTestCasePackage ?? (testCasesEnabled ? '' : (testCasePackages[0] ?? '')),
+  );
   const [testCaseStep, setTestCaseStep] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [files, setFiles] = useState<File[]>([]);
