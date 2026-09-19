@@ -215,23 +215,28 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
     current.status === 'closed' &&
     (newStatus === 'ongoing' || newStatus === 'backlog' || newStatus === 'ready_for_test');
   const isClosing = newStatus === 'closed';
+  // Hand-back applies whenever the ticket is leaving Prometeia's hands and
+  // landing back with Bank/SIT to act on: closing it for the reporter to
+  // verify, sending it to test, or rejecting it outright. Backlog/ongoing
+  // stay with Prometeia, so they're excluded.
+  const isHandBack = newStatus === 'closed' || newStatus === 'ready_for_test' || newStatus === 'rejected';
   const patch: Record<string, unknown> = {
     status: newStatus,
     closed_at: isClosing ? new Date().toISOString() : null,
   };
-  // Hand a closed ticket straight back to whoever reported it, so it's clear
-  // who needs to verify the fix — the same "back to reporter" move Prometeia
-  // could already do manually, just automatic now.
-  if (isClosing) patch.assignee_id = current.reporter_id;
+  // Hand the ticket straight back to whoever reported it, so it's clear who
+  // needs to act next — the same "back to reporter" move Prometeia could
+  // already do manually, just automatic now.
+  if (isHandBack) patch.assignee_id = current.reporter_id;
 
-  // Optimistic-concurrency guard: only commit if status (and, when closing,
+  // Optimistic-concurrency guard: only commit if status (and, on hand-back,
   // assignee_id) still match what we just read. Otherwise someone else's
   // concurrent edit landed in between — e.g. one person closing a ticket
   // while another reassigns it — and blindly writing here would silently
   // discard their change and log a history row against a from-value that's
   // no longer true. Fail loudly instead of corrupting the audit trail.
   let query = supabase.from('issues').update(patch).eq('id', issueId).eq('status', current.status);
-  if (isClosing) {
+  if (isHandBack) {
     query =
       current.assignee_id === null
         ? query.is('assignee_id', null)
@@ -245,7 +250,7 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
     await recordHistory(supabase, issueId, 'status', current.status, isReopen ? 'reopened' : newStatus, session.id),
   ];
 
-  if (isClosing && current.assignee_id !== current.reporter_id) {
+  if (isHandBack && current.assignee_id !== current.reporter_id) {
     const [fromName, toName] = await Promise.all([
       profileName(supabase, current.assignee_id),
       profileName(supabase, current.reporter_id),
@@ -276,13 +281,13 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
   // `is distinct from` guard: re-dropping a card in the column it already
   // sits in must not mail anyone), via `statusChangedEmailRecipientIds`,
   // which mirrors both of that trigger's insert blocks.
-  // The close-time hand-back above also flips assignee_id to the reporter
-  // before this ever runs, so `new.assignee_id === new.reporter_id` by the
-  // time the trigger (and this) evaluate the assignee branch — pass `null`
-  // rather than the pre-update assignee, or the old assignee would be
-  // incorrectly re-notified. This also deliberately avoids a second
-  // "assigned to you" email on close: the status email already tells the
-  // reporter the ticket is theirs to verify.
+  // The hand-back above also flips assignee_id to the reporter before this
+  // ever runs, so `new.assignee_id === new.reporter_id` by the time the
+  // trigger (and this) evaluate the assignee branch — pass `null` rather
+  // than the pre-update assignee, or the old assignee would be incorrectly
+  // re-notified. This also deliberately avoids a second "assigned to you"
+  // email on hand-back: the status email already tells the reporter the
+  // ticket is theirs to act on.
   const reporterId = current.reporter_id as string;
   if (newStatus !== current.status) {
     const label = statusEmailLabel(newStatus, isReopen);
@@ -291,7 +296,7 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
     notifyByEmail(async () => {
       const recipientIds = statusChangedEmailRecipientIds({
         reporterId,
-        assigneeId: isClosing ? null : current.assignee_id,
+        assigneeId: isHandBack ? null : current.assignee_id,
         actorId: session.id,
       });
       const recipients = await recipientEmails(supabase, recipientIds);
