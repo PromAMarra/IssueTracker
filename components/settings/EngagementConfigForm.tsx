@@ -154,7 +154,7 @@ export function EngagementConfigForm({
           Track test cases from uploaded files
           <span className="text-xs text-ink-soft">
             When on, Prometeia can upload test case files and the "Test case package" field on
-            tickets is populated from them instead of the list below.
+            tickets is populated from them instead of the list above.
           </span>
         </span>
       </label>
