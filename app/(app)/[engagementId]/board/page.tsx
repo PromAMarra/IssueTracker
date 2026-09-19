@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
 import { listIssues } from '@/lib/data/issues';
 import { Board } from '@/components/issues/Board';
-import { NewIssueForm } from '@/components/issues/NewIssueForm';
+import { NewIssueModal } from '@/components/issues/NewIssueModal';
 import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
 
 export default async function BoardPage({
@@ -25,7 +25,7 @@ export default async function BoardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <NewIssueForm
+      <NewIssueModal
         engagementId={engagement.id}
         modules={engagement.modules}
         testCasePackages={engagement.test_case_packages}
