@@ -3,22 +3,33 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { IconChartLine, IconLayoutKanban, IconList, IconMenu2, IconSettings, type Icon } from '@tabler/icons-react';
+import { IconChartLine, IconClipboardCheck, IconLayoutKanban, IconList, IconMenu2, IconSettings, type Icon } from '@tabler/icons-react';
 import { activeNavSection, NAV_SECTIONS, type NavSectionKey } from '@/lib/navSections';
 
 const ICONS: Record<NavSectionKey, Icon> = {
   board: IconLayoutKanban,
   list: IconList,
   dashboard: IconChartLine,
+  'testing-lab': IconClipboardCheck,
   settings: IconSettings,
 };
 
 const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
 
-export function Sidebar({ engagementId, isProm }: { engagementId: string; isProm: boolean }) {
+export function Sidebar({
+  engagementId,
+  isProm,
+  testCasesEnabled,
+}: {
+  engagementId: string;
+  isProm: boolean;
+  testCasesEnabled: boolean;
+}) {
   const pathname = usePathname();
   const active = activeNavSection(pathname, engagementId);
-  const sections = isProm ? NAV_SECTIONS : NAV_SECTIONS.filter((s) => s.key !== 'settings');
+  const sections = NAV_SECTIONS.filter(
+    (s) => (s.key !== 'settings' || isProm) && (s.key !== 'testing-lab' || testCasesEnabled),
+  );
 
   // Collapse only applies at desktop widths (see the `md:` classes below) —
   // on narrow viewports the sidebar always shows full labels, since the

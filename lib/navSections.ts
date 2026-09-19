@@ -1,9 +1,10 @@
-export type NavSectionKey = 'board' | 'list' | 'dashboard' | 'settings';
+export type NavSectionKey = 'board' | 'list' | 'dashboard' | 'testing-lab' | 'settings';
 
 export const NAV_SECTIONS: { key: NavSectionKey; label: string }[] = [
   { key: 'board', label: 'Board' },
   { key: 'list', label: 'List' },
   { key: 'dashboard', label: 'Dashboard' },
+  { key: 'testing-lab', label: 'Testing Lab' },
   { key: 'settings', label: 'Settings' },
 ];
 

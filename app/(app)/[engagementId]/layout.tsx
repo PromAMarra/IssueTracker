@@ -32,7 +32,11 @@ export default async function EngagementLayout({
         prometeiaLogoUrl={platformSettings.prometeiaLogoUrl}
       />
       <div className="flex flex-1 flex-col md:flex-row">
-        <Sidebar engagementId={engagement.id} isProm={session.profile.is_prometeia} />
+        <Sidebar
+          engagementId={engagement.id}
+          isProm={session.profile.is_prometeia}
+          testCasesEnabled={engagement.test_cases_enabled}
+        />
         <main className="min-w-0 flex-1 px-6 py-6">
           <Breadcrumbs engagementId={engagement.id} />
           {children}

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { activeNavSection, NAV_SECTIONS } from './navSections';
 
 describe('NAV_SECTIONS', () => {
-  it('lists board, list, dashboard, settings in that order', () => {
-    expect(NAV_SECTIONS.map((s) => s.key)).toEqual(['board', 'list', 'dashboard', 'settings']);
+  it('lists board, list, dashboard, testing-lab, settings in that order', () => {
+    expect(NAV_SECTIONS.map((s) => s.key)).toEqual(['board', 'list', 'dashboard', 'testing-lab', 'settings']);
   });
 });
 
