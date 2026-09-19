@@ -54,7 +54,7 @@ export async function uploadTestPackage(
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) throw new Error('The uploaded file has no sheets.');
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[firstSheetName]);
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[firstSheetName], { defval: null });
 
   const parsed = parseTestCaseSheet(rows);
   if (!parsed.ok) throw new Error(parsed.error);
@@ -90,8 +90,15 @@ export async function uploadTestPackage(
 export async function deleteTestPackage(engagementId: string, packageId: string): Promise<void> {
   await requireProm();
   const supabase = createServerClient();
-  const { error } = await supabase.from('test_packages').delete().eq('id', packageId);
+  const { data, error } = await supabase
+    .from('test_packages')
+    .delete()
+    .eq('id', packageId)
+    .eq('engagement_id', engagementId)
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('This test package could not be deleted — it may already be gone.');
   revalidatePath(`/${engagementId}/settings`);
 }
 
