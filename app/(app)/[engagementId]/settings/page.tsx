@@ -3,10 +3,12 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement } from '@/lib/data/engagements';
 import { getPlatformSettings } from '@/lib/data/settings';
 import { listMembers } from '@/app/actions/engagements';
+import { listTestPackages } from '@/app/actions/testPackages';
 import { SettingsForm } from '@/components/settings/SettingsForm';
 import { MemberManager } from '@/components/settings/MemberManager';
 import { BankLogoUploader } from '@/components/settings/BankLogoUploader';
 import { PrometeiaLogoUploader } from '@/components/settings/PrometeiaLogoUploader';
+import { TestPackageManager } from '@/components/settings/TestPackageManager';
 
 export default async function SettingsPage({ params }: { params: { engagementId: string } }) {
   const session = await getSessionUser();
@@ -22,6 +24,7 @@ export default async function SettingsPage({ params }: { params: { engagementId:
   if (!engagement) redirect('/');
 
   const sitMembers = engagement.sit_expected ? await listMembers(params.engagementId, 'sit') : [];
+  const testPackages = engagement.test_cases_enabled ? await listTestPackages(params.engagementId) : [];
 
   return (
     <div className="flex flex-col gap-10">
@@ -64,6 +67,11 @@ export default async function SettingsPage({ params }: { params: { engagementId:
       <section>
         <MemberManager engagementId={params.engagementId} role="bank" initialMembers={bankMembers} />
       </section>
+      {engagement.test_cases_enabled && (
+        <section>
+          <TestPackageManager engagementId={params.engagementId} initialPackages={testPackages} />
+        </section>
+      )}
     </div>
   );
 }
