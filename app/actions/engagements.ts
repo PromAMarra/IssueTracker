@@ -108,6 +108,14 @@ export async function uploadBankLogo(engagementId: string, formData: FormData) {
 
 export type MemberRole = 'bank' | 'sit' | 'prometeia';
 
+// `engagement_members.phase` only allows 'sit' or 'uat' at the DB level (see
+// supabase/migrations/0012_sit_members.sql) — 'uat' IS the stored value for
+// what the UI calls "Bank" (see the PHASE_ORG mapping in
+// app/(app)/[engagementId]/dashboard/page.tsx). This maps the domain-level
+// MemberRole to the phase value actually stored/queried in the DB.
+const roleToPhase = (role: MemberRole): 'sit' | 'uat' | null =>
+  role === 'prometeia' ? null : role === 'bank' ? 'uat' : role;
+
 export type AddMemberResult = { ok: boolean; message: string };
 
 export async function addMemberByEmail(
@@ -138,7 +146,7 @@ export async function addMemberByEmail(
 
   const { error } = await supabase
     .from('engagement_members')
-    .insert({ engagement_id: engagementId, user_id: profile.id, phase: role === 'prometeia' ? null : role });
+    .insert({ engagement_id: engagementId, user_id: profile.id, phase: roleToPhase(role) });
   if (error) {
     if (error.code === '23505') return { ok: false, message: `${email} is already a member.` };
     throw error;
@@ -158,7 +166,7 @@ export async function listMembers(engagementId: string, role: MemberRole): Promi
     .select('user_id, profiles!inner(email, full_name, is_prometeia)')
     .eq('engagement_id', engagementId)
     .eq('profiles.is_prometeia', role === 'prometeia');
-  if (role !== 'prometeia') query = query.eq('phase', role);
+  if (role !== 'prometeia') query = query.eq('phase', roleToPhase(role));
   const { data, error } = await query;
   if (error) throw error;
   return (

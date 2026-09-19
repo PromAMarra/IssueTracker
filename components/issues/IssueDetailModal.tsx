@@ -16,6 +16,7 @@ import {
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { CollapsibleSection } from './CollapsibleSection';
+import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
 import { statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
@@ -146,6 +147,7 @@ export function IssueDetailModal({
 
   const { issue, reporterName, assigneeName, comments, history, attachments } = detail;
   const durations = statusDurations(issue, history, new Date());
+  const canPost = canPostOnIssue(issue.status, isProm);
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={close}>
@@ -341,11 +343,12 @@ export function IssueDetailModal({
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
                 placeholder="Add a comment"
-                className="flex-1 rounded-md border border-ink-soft/30 px-3 py-2 text-sm"
+                disabled={!canPost}
+                className="flex-1 rounded-md border border-ink-soft/30 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || !canPost}
                 className="rounded-md bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
               >
                 Send
@@ -357,10 +360,12 @@ export function IssueDetailModal({
                 ref={commentFileInputRef}
                 type="file"
                 multiple
+                disabled={!canPost}
                 onChange={(e) => setCommentFiles(e.target.files ? Array.from(e.target.files) : [])}
-                className="text-sm font-normal"
+                className="text-sm font-normal disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
+            {!canPost && <p className="text-xs text-ink-soft">{turnLockedMessage(issue.status)}</p>}
           </form>
         </CollapsibleSection>
 

@@ -13,6 +13,7 @@ import {
   statusEmailLabel,
   type IssueEmailContext,
 } from '@/lib/email/issueEmails';
+import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
@@ -507,6 +508,18 @@ export async function addComment(issueId: string, body: string): Promise<string>
     throw new Error('Comment must be 1-4000 characters.');
   }
   const supabase = createServerClient();
+
+  const { data: issueForAccess, error: issueForAccessError } = await supabase
+    .from('issues')
+    .select('status')
+    .eq('id', issueId)
+    .single();
+  if (issueForAccessError) throw issueForAccessError;
+  const issueStatus = issueForAccess.status as Status;
+  if (!canPostOnIssue(issueStatus, session.profile.is_prometeia)) {
+    throw new Error(turnLockedMessage(issueStatus));
+  }
+
   const { data, error } = await supabase
     .from('issue_comments')
     .insert({ issue_id: issueId, author_id: session.id, body: trimmedBody })
@@ -684,6 +697,18 @@ export async function uploadAttachment(
   if (!(file instanceof File)) throw new Error('No file provided');
 
   const supabase = createServerClient();
+
+  const { data: issueForAccess, error: issueForAccessError } = await supabase
+    .from('issues')
+    .select('status')
+    .eq('id', issueId)
+    .single();
+  if (issueForAccessError) throw issueForAccessError;
+  const issueStatus = issueForAccess.status as Status;
+  if (!canPostOnIssue(issueStatus, session.profile.is_prometeia)) {
+    throw new Error(turnLockedMessage(issueStatus));
+  }
+
   const safeExt = (file.name.split('.').pop() ?? 'bin').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'bin';
   const path = `${engagementId}/${issueId}/${Date.now()}-${crypto.randomUUID()}.${safeExt}`;
   const { error: uploadError } = await supabase.storage.from('issue-attachments').upload(path, file);
