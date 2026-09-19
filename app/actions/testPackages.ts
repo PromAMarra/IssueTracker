@@ -122,6 +122,58 @@ export async function listTestPackages(engagementId: string): Promise<TestPackag
   }));
 }
 
+export type TestPackageStepDetail = {
+  id: string;
+  stepNumber: number;
+  stepName: string;
+  stepDescription: string;
+  expectedOutcome: string;
+  result: TestResult | null;
+};
+
+export type TestPackageDetail = {
+  id: string;
+  name: string;
+  steps: TestPackageStepDetail[];
+};
+
+export async function getTestPackageDetail(packageId: string): Promise<TestPackageDetail> {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('test_packages')
+    .select(
+      'id, name, test_package_steps(id, step_number, step_name, step_description, expected_outcome, result)',
+    )
+    .eq('id', packageId)
+    .single();
+  if (error) throw error;
+  const row = data as unknown as {
+    id: string;
+    name: string;
+    test_package_steps: {
+      id: string;
+      step_number: number;
+      step_name: string;
+      step_description: string;
+      expected_outcome: string;
+      result: TestResult | null;
+    }[];
+  };
+  const steps = [...row.test_package_steps]
+    .sort((a, b) => a.step_number - b.step_number)
+    .map((s) => ({
+      id: s.id,
+      stepNumber: s.step_number,
+      stepName: s.step_name,
+      stepDescription: s.step_description,
+      expectedOutcome: s.expected_outcome,
+      result: s.result,
+    }));
+  return { id: row.id, name: row.name, steps };
+}
+
 export async function updateTestStepResult(stepId: string, result: TestResult | null): Promise<void> {
   const session = await requireNonProm();
   const supabase = createServerClient();
