@@ -35,3 +35,12 @@ export type SlaDays = Record<Priority, number>;
 
 export const STATUSES: Status[] = ['backlog', 'ongoing', 'ready_for_test', 'closed', 'rejected'];
 export const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
+
+export type TestResult = 'passed' | 'passed_with_minor' | 'failed' | 'na';
+export const TEST_RESULTS: TestResult[] = ['passed', 'passed_with_minor', 'failed', 'na'];
+export const TEST_RESULT_LABELS: Record<TestResult, string> = {
+  passed: 'Passed',
+  passed_with_minor: 'Passed with minor',
+  failed: 'Failed',
+  na: 'N/A',
+};

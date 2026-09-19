@@ -18,6 +18,7 @@ export type EngagementInput = {
   uatStartDate: string | null;
   uatEndDate: string | null;
   sitExpected: boolean;
+  testCasesEnabled: boolean;
 };
 
 async function requireProm() {
@@ -53,6 +54,7 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
       uat_start_date: input.uatStartDate,
       uat_end_date: input.uatEndDate,
       sit_expected: input.sitExpected,
+      test_cases_enabled: input.testCasesEnabled,
       created_by: session.id,
     })
     .select('id')
@@ -80,6 +82,7 @@ export async function updateEngagementSettings(engagementId: string, input: Enga
       uat_start_date: input.uatStartDate,
       uat_end_date: input.uatEndDate,
       sit_expected: input.sitExpected,
+      test_cases_enabled: input.testCasesEnabled,
     })
     .eq('id', engagementId);
   if (error) throw error;

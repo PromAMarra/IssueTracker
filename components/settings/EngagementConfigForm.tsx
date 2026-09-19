@@ -15,6 +15,7 @@ export type EngagementConfigValues = {
   uatStartDate: string | null;
   uatEndDate: string | null;
   sitExpected: boolean;
+  testCasesEnabled: boolean;
 };
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
@@ -46,6 +47,7 @@ export function EngagementConfigForm({
   const [uatStartDate, setUatStartDate] = useState(initial.uatStartDate ?? '');
   const [uatEndDate, setUatEndDate] = useState(initial.uatEndDate ?? '');
   const [sitExpected, setSitExpected] = useState(initial.sitExpected);
+  const [testCasesEnabled, setTestCasesEnabled] = useState(initial.testCasesEnabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +68,7 @@ export function EngagementConfigForm({
         uatStartDate: uatStartDate || null,
         uatEndDate: uatEndDate || null,
         sitExpected,
+        testCasesEnabled,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -115,15 +118,17 @@ export function EngagementConfigForm({
           className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm text-ink">
-        Test case packages (comma-separated)
-        <input
-          value={testCasePackages}
-          onChange={(e) => setTestCasePackages(e.target.value)}
-          placeholder="Onboarding Suite, Payments Suite, Regression Pack"
-          className="rounded-md border border-ink-soft/30 px-3 py-2"
-        />
-      </label>
+      {!testCasesEnabled && (
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          Test case packages (comma-separated)
+          <input
+            value={testCasePackages}
+            onChange={(e) => setTestCasePackages(e.target.value)}
+            placeholder="Onboarding Suite, Payments Suite, Regression Pack"
+            className="rounded-md border border-ink-soft/30 px-3 py-2"
+          />
+        </label>
+      )}
       <label className="flex items-start gap-2 text-sm text-ink">
         <input
           type="checkbox"
@@ -135,6 +140,21 @@ export function EngagementConfigForm({
           This engagement has a SIT phase
           <span className="text-xs text-ink-soft">
             Unchecking this removes SIT from settings, the dashboard, and filters for this engagement.
+          </span>
+        </span>
+      </label>
+      <label className="flex items-start gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={testCasesEnabled}
+          onChange={(e) => setTestCasesEnabled(e.target.checked)}
+          className="mt-1"
+        />
+        <span className="flex flex-col gap-1">
+          Track test cases from uploaded files
+          <span className="text-xs text-ink-soft">
+            When on, Prometeia can upload test case files and the "Test case package" field on
+            tickets is populated from them instead of the list below.
           </span>
         </span>
       </label>

@@ -41,6 +41,7 @@ export default async function SettingsPage({ params }: { params: { engagementId:
             uatStartDate: engagement.uat_start_date,
             uatEndDate: engagement.uat_end_date,
             sitExpected: engagement.sit_expected,
+            testCasesEnabled: engagement.test_cases_enabled,
           }}
         />
       </section>
