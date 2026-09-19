@@ -700,13 +700,27 @@ export async function uploadAttachment(
 
   const { data: issueForAccess, error: issueForAccessError } = await supabase
     .from('issues')
-    .select('status')
+    .select('status, reporter_id')
     .eq('id', issueId)
     .single();
   if (issueForAccessError) throw issueForAccessError;
   const issueStatus = issueForAccess.status as Status;
   if (!canPostOnIssue(issueStatus, session.profile.is_prometeia)) {
-    throw new Error(turnLockedMessage(issueStatus));
+    // Exception: NewIssueForm calls this right after createIssue so a
+    // reporter can attach screenshots while filing — that happens while
+    // status is still 'backlog', which is otherwise Prometeia's turn. Only
+    // exempt the reporter while the ticket is still untouched by anyone (no
+    // comments, no history yet), so the window closes the moment a real
+    // conversation starts rather than staying open indefinitely.
+    const [commentsRes, historyRes] = await Promise.all([
+      supabase.from('issue_comments').select('id', { count: 'exact', head: true }).eq('issue_id', issueId),
+      supabase.from('issue_history').select('id', { count: 'exact', head: true }).eq('issue_id', issueId),
+    ]);
+    if (commentsRes.error) throw commentsRes.error;
+    if (historyRes.error) throw historyRes.error;
+    const stillUntouched =
+      session.id === issueForAccess.reporter_id && (commentsRes.count ?? 0) === 0 && (historyRes.count ?? 0) === 0;
+    if (!stillUntouched) throw new Error(turnLockedMessage(issueStatus));
   }
 
   const safeExt = (file.name.split('.').pop() ?? 'bin').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10) || 'bin';
