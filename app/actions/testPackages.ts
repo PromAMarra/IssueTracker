@@ -118,11 +118,19 @@ export async function listTestPackages(engagementId: string): Promise<TestPackag
 export async function updateTestStepResult(stepId: string, result: TestResult | null): Promise<void> {
   const session = await requireNonProm();
   const supabase = createServerClient();
-  const { error } = await supabase
+  // .select().maybeSingle() after the update confirms a row was actually
+  // touched — see updateIssueStatus in app/actions/issues.ts for the same
+  // pattern. An unmatched id and an RLS-blocked write (the caller isn't a
+  // member of this step's engagement) both otherwise return success having
+  // updated zero rows.
+  const { data, error } = await supabase
     .from('test_package_steps')
     .update({ result, result_updated_by: session.id, result_updated_at: new Date().toISOString() })
-    .eq('id', stepId);
+    .eq('id', stepId)
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('This test step could not be updated. It may have been removed, or you may not have access to it.');
 }
 
 export type TestCaseStepOption = { packageName: string; stepName: string };
