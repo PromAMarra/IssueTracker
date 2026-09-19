@@ -14,6 +14,7 @@ export type EngagementConfigValues = {
   sitEndDate: string | null;
   uatStartDate: string | null;
   uatEndDate: string | null;
+  sitExpected: boolean;
 };
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
@@ -44,6 +45,7 @@ export function EngagementConfigForm({
   const [sitEndDate, setSitEndDate] = useState(initial.sitEndDate ?? '');
   const [uatStartDate, setUatStartDate] = useState(initial.uatStartDate ?? '');
   const [uatEndDate, setUatEndDate] = useState(initial.uatEndDate ?? '');
+  const [sitExpected, setSitExpected] = useState(initial.sitExpected);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ export function EngagementConfigForm({
         sitEndDate: sitEndDate || null,
         uatStartDate: uatStartDate || null,
         uatEndDate: uatEndDate || null,
+        sitExpected,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -121,30 +124,48 @@ export function EngagementConfigForm({
           className="rounded-md border border-ink-soft/30 px-3 py-2"
         />
       </label>
+      <label className="flex items-start gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={sitExpected}
+          onChange={(e) => setSitExpected(e.target.checked)}
+          className="mt-1"
+        />
+        <span className="flex flex-col gap-1">
+          This engagement has a SIT phase
+          <span className="text-xs text-ink-soft">
+            Unchecking this removes SIT from settings, the dashboard, and filters for this engagement.
+          </span>
+        </span>
+      </label>
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium text-ink">Testing periods</legend>
         <span className="text-xs text-ink-soft">
           Used by the dashboard's daily defects report. Leave blank for a period that doesn't apply.
         </span>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            SIT start
-            <input
-              type="date"
-              value={sitStartDate}
-              onChange={(e) => setSitStartDate(e.target.value)}
-              className="rounded-md border border-ink-soft/30 px-2 py-1"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            SIT end
-            <input
-              type="date"
-              value={sitEndDate}
-              onChange={(e) => setSitEndDate(e.target.value)}
-              className="rounded-md border border-ink-soft/30 px-2 py-1"
-            />
-          </label>
+          {sitExpected && (
+            <>
+              <label className="flex flex-col gap-1 text-xs text-ink-soft">
+                SIT start
+                <input
+                  type="date"
+                  value={sitStartDate}
+                  onChange={(e) => setSitStartDate(e.target.value)}
+                  className="rounded-md border border-ink-soft/30 px-2 py-1"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-ink-soft">
+                SIT end
+                <input
+                  type="date"
+                  value={sitEndDate}
+                  onChange={(e) => setSitEndDate(e.target.value)}
+                  className="rounded-md border border-ink-soft/30 px-2 py-1"
+                />
+              </label>
+            </>
+          )}
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
             UAT start
             <input

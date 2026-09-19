@@ -72,12 +72,14 @@ export function IssueTable({
   teamMembers,
   isProm,
   history: initialHistory,
+  sitExpected,
 }: {
   issues: IssueWithNames[];
   modules: string[];
   teamMembers: TeamMember[];
   isProm: boolean;
   history: IssueHistoryEntry[];
+  sitExpected: boolean;
 }) {
   const router = useRouter();
   const [issues, setIssues] = useState(initialIssues);
@@ -252,7 +254,7 @@ export function IssueTable({
         >
           <option value="">Bank + SIT + Prometeia</option>
           <option value="bank">Bank</option>
-          <option value="sit">SIT</option>
+          {sitExpected && <option value="sit">SIT</option>}
           <option value="prometeia">Prometeia</option>
         </select>
         <button

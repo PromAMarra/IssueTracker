@@ -64,7 +64,9 @@ export default async function DashboardPage({
   const timeToClose = timeToCloseByPriority(issues, engagement.sla_days);
   const throughput = throughputByWeek(issues, 8, now);
   const moduleVol = moduleVolume(issues);
-  const orgVol = orgVolume(issues);
+  const orgVol = engagement.sit_expected
+    ? orgVolume(issues)
+    : orgVolume(issues).filter((d) => d.org !== 'sit');
   const aging = agingReport(issues, engagement.sla_days, now);
   const timeInStatus = timeInStatusByPriority(issues, history, now);
 
@@ -92,9 +94,11 @@ export default async function DashboardPage({
           <Link href={phaseLink(null)} className={phaseClass(null)}>
             All
           </Link>
-          <Link href={phaseLink('sit')} className={phaseClass('sit')}>
-            SIT
-          </Link>
+          {engagement.sit_expected && (
+            <Link href={phaseLink('sit')} className={phaseClass('sit')}>
+              SIT
+            </Link>
+          )}
           <Link href={phaseLink('uat')} className={phaseClass('uat')}>
             UAT
           </Link>

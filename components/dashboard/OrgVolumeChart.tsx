@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import type { Org } from '@/lib/types';
 
 const COLORS: Record<Org, string> = { bank: '#00DC78', sit: '#FF7D00', prometeia: '#000D4C' };
-const LABELS: Record<Org, string> = { bank: 'Bank (UAT)', sit: 'SIT (IVS)', prometeia: 'Prometeia' };
+const LABELS: Record<Org, string> = { bank: 'Bank (UAT)', sit: 'SIT', prometeia: 'Prometeia' };
 
 export function OrgVolumeChart({ data }: { data: { org: Org; count: number }[] }) {
   const rows = data.map((d) => ({ ...d, label: LABELS[d.org] }));

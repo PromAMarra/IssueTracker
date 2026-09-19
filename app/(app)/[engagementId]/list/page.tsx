@@ -31,6 +31,7 @@ export default async function ListPage({
         teamMembers={teamMembers}
         isProm={session.profile.is_prometeia}
         history={history}
+        sitExpected={engagement.sit_expected}
       />
       {searchParams.issue && (
         <IssueDetailModal

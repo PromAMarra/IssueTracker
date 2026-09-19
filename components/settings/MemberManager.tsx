@@ -10,9 +10,9 @@ const COPY: Record<MemberRole, { title: string; empty: string; placeholder: stri
     placeholder: 'person@bank.com',
   },
   sit: {
-    title: 'SIT members (IVS)',
+    title: 'SIT members',
     empty: 'No SIT members yet — tickets they report will be tagged as SIT, not UAT.',
-    placeholder: 'person@ivs.com',
+    placeholder: 'person@example.com',
   },
   prometeia: {
     title: 'Prometeia team',

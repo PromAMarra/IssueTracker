@@ -13,14 +13,15 @@ export default async function SettingsPage({ params }: { params: { engagementId:
   if (!session) redirect('/login');
   if (!session.profile.is_prometeia) redirect(`/${params.engagementId}/board`);
 
-  const [engagement, bankMembers, sitMembers, prometeiaMembers, platformSettings] = await Promise.all([
+  const [engagement, bankMembers, prometeiaMembers, platformSettings] = await Promise.all([
     getEngagement(params.engagementId),
     listMembers(params.engagementId, 'bank'),
-    listMembers(params.engagementId, 'sit'),
     listMembers(params.engagementId, 'prometeia'),
     getPlatformSettings(),
   ]);
   if (!engagement) redirect('/');
+
+  const sitMembers = engagement.sit_expected ? await listMembers(params.engagementId, 'sit') : [];
 
   return (
     <div className="flex flex-col gap-10">
@@ -39,6 +40,7 @@ export default async function SettingsPage({ params }: { params: { engagementId:
             sitEndDate: engagement.sit_end_date,
             uatStartDate: engagement.uat_start_date,
             uatEndDate: engagement.uat_end_date,
+            sitExpected: engagement.sit_expected,
           }}
         />
       </section>
@@ -53,9 +55,11 @@ export default async function SettingsPage({ params }: { params: { engagementId:
       <section>
         <MemberManager engagementId={params.engagementId} role="prometeia" initialMembers={prometeiaMembers} />
       </section>
-      <section>
-        <MemberManager engagementId={params.engagementId} role="sit" initialMembers={sitMembers} />
-      </section>
+      {engagement.sit_expected && (
+        <section>
+          <MemberManager engagementId={params.engagementId} role="sit" initialMembers={sitMembers} />
+        </section>
+      )}
       <section>
         <MemberManager engagementId={params.engagementId} role="bank" initialMembers={bankMembers} />
       </section>

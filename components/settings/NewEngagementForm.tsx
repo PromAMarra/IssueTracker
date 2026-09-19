@@ -15,6 +15,7 @@ const EMPTY = {
   sitEndDate: null as string | null,
   uatStartDate: null as string | null,
   uatEndDate: null as string | null,
+  sitExpected: true,
 };
 
 export function NewEngagementForm() {

@@ -17,6 +17,7 @@ export type EngagementInput = {
   sitEndDate: string | null;
   uatStartDate: string | null;
   uatEndDate: string | null;
+  sitExpected: boolean;
 };
 
 async function requireProm() {
@@ -51,6 +52,7 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
       sit_end_date: input.sitEndDate,
       uat_start_date: input.uatStartDate,
       uat_end_date: input.uatEndDate,
+      sit_expected: input.sitExpected,
       created_by: session.id,
     })
     .select('id')
@@ -77,6 +79,7 @@ export async function updateEngagementSettings(engagementId: string, input: Enga
       sit_end_date: input.sitEndDate,
       uat_start_date: input.uatStartDate,
       uat_end_date: input.uatEndDate,
+      sit_expected: input.sitExpected,
     })
     .eq('id', engagementId);
   if (error) throw error;
@@ -142,6 +145,18 @@ export async function addMemberByEmail(
           ? `${email} is registered as a bank/SIT account, not a Prometeia account.`
           : `${email} is registered as a Prometeia account, not a bank/SIT account.`,
     };
+  }
+
+  if (role === 'sit') {
+    const { data: engagement, error: engagementError } = await supabase
+      .from('engagements')
+      .select('sit_expected')
+      .eq('id', engagementId)
+      .single();
+    if (engagementError) throw engagementError;
+    if (!engagement.sit_expected) {
+      return { ok: false, message: 'SIT is not enabled for this engagement — enable it in Settings first.' };
+    }
   }
 
   const { error } = await supabase
