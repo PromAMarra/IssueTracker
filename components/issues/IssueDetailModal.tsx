@@ -269,7 +269,7 @@ export function IssueDetailModal({
           </div>
         )}
 
-        <CollapsibleSection title="Attachments" icon={IconPaperclip}>
+        <CollapsibleSection title="Attachments" icon={IconPaperclip} defaultOpen={false}>
           <ul className="mb-2 flex flex-col gap-1">
             {attachments.map((a) => (
               <li key={a.id}>
@@ -283,7 +283,7 @@ export function IssueDetailModal({
           <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Comments" icon={IconMessage}>
+        <CollapsibleSection title="Comments" icon={IconMessage} defaultOpen={false}>
           <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (
               <li
@@ -369,7 +369,7 @@ export function IssueDetailModal({
           </form>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Time in status" icon={IconClock}>
+        <CollapsibleSection title="Time in status" icon={IconClock} defaultOpen={false}>
           <ul className="flex flex-col gap-1 text-sm">
             {STATUSES.filter((s) => s !== 'closed' && s !== 'rejected').map((s) => (
               <li key={s} className="flex justify-between">
@@ -380,7 +380,7 @@ export function IssueDetailModal({
           </ul>
         </CollapsibleSection>
 
-        <CollapsibleSection title="History" icon={IconHistory}>
+        <CollapsibleSection title="History" icon={IconHistory} defaultOpen={false}>
           <ul className="flex flex-col gap-1">
             {history.map((h) => (
               <li key={h.id} className="text-xs text-ink-soft">
