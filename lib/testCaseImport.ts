@@ -59,7 +59,12 @@ export function parseTestCaseSheet(rows: Record<string, unknown>[]): ParseTestCa
   const steps: ParsedTestStep[] = rows
     .map((row, index) => {
       const rawStepNumber = row[cols['Step']];
-      const parsedStepNumber = typeof rawStepNumber === 'number' ? rawStepNumber : Number(rawStepNumber);
+      const parsedStepNumber =
+        typeof rawStepNumber === 'number'
+          ? rawStepNumber
+          : typeof rawStepNumber === 'string' && rawStepNumber.trim() !== ''
+            ? Number(rawStepNumber)
+            : NaN;
       const stepNumber = Number.isInteger(parsedStepNumber) ? parsedStepNumber : index + 1;
 
       return {
@@ -72,6 +77,10 @@ export function parseTestCaseSheet(rows: Record<string, unknown>[]): ParseTestCa
     })
     // A fully blank trailing row (common at the end of an Excel sheet) has no step name.
     .filter((step) => step.stepName !== '');
+
+  if (steps.length === 0) {
+    return { ok: false, error: 'The sheet has no rows with a step name.' };
+  }
 
   return { ok: true, steps };
 }

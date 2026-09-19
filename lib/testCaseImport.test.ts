@@ -62,7 +62,7 @@ describe('parseTestCaseSheet', () => {
     const result = parseTestCaseSheet(rows);
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected failure');
-    expect(result.error).toContain('Step');
+    expect(result.error).toBe('Missing required column: Step.');
   });
 
   it('reports every missing required header when several are absent', () => {
@@ -110,12 +110,50 @@ describe('parseTestCaseSheet', () => {
     expect(result.steps[1].stepNumber).toBe(2);
   });
 
+  const BLANK_STEP_VALUES: { label: string; value: string | null }[] = [
+    { label: 'empty string', value: '' },
+    { label: 'whitespace-only string', value: '   ' },
+    { label: 'null', value: null },
+  ];
+  for (const { label, value } of BLANK_STEP_VALUES) {
+    it(`falls back to row order when Step is ${label}`, () => {
+      const rows = [
+        { ...VALID_ROWS[0], Step: value },
+        { ...VALID_ROWS[1], Step: value },
+      ];
+      const result = parseTestCaseSheet(rows);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error('expected ok');
+      expect(result.steps[0].stepNumber).toBe(1);
+      expect(result.steps[1].stepNumber).toBe(2);
+    });
+  }
+
+  it('treats a null value in a required column (as produced by defval: null for a blank cell) as an empty string', () => {
+    const rows = [{ ...VALID_ROWS[0], 'Step description': null }];
+    const result = parseTestCaseSheet(rows);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.steps[0].stepDescription).toBe('');
+  });
+
   it('filters out a fully blank trailing row', () => {
     const rows = [...VALID_ROWS, { 'Step name': '', Step: '', 'Step description': '', 'Expected outcome': '' }];
     const result = parseTestCaseSheet(rows);
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected ok');
     expect(result.steps).toHaveLength(2);
+  });
+
+  it('fails when every row has a blank step name', () => {
+    const rows = [
+      { 'Step name': '', Step: 1, 'Step description': 'Do the thing.', 'Expected outcome': 'The thing happens.' },
+      { 'Step name': '', Step: 2, 'Step description': 'Do another thing.', 'Expected outcome': 'It happens.' },
+    ];
+    const result = parseTestCaseSheet(rows);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected failure');
+    expect(result.error).toBe('The sheet has no rows with a step name.');
   });
 
   it('fails on zero data rows', () => {
