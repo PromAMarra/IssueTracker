@@ -4,16 +4,21 @@ import { useState } from 'react';
 import { IconPlus, IconX } from '@tabler/icons-react';
 import { NewIssueForm } from './NewIssueForm';
 import type { TeamMember } from '@/lib/data/engagements';
+import type { TestCaseStepOption } from '@/app/actions/testPackages';
 
 export function NewIssueModal({
   engagementId,
   modules,
   testCasePackages,
+  testCasesEnabled,
+  testCaseStepOptions,
   teamMembers,
 }: {
   engagementId: string;
   modules: string[];
   testCasePackages: string[];
+  testCasesEnabled: boolean;
+  testCaseStepOptions: TestCaseStepOption[];
   teamMembers: TeamMember[];
 }) {
   const [open, setOpen] = useState(false);
@@ -52,6 +57,8 @@ export function NewIssueModal({
               engagementId={engagementId}
               modules={modules}
               testCasePackages={testCasePackages}
+              testCasesEnabled={testCasesEnabled}
+              testCaseStepOptions={testCaseStepOptions}
               teamMembers={teamMembers}
               onCreated={() => setOpen(false)}
             />

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
 import { listIssues } from '@/lib/data/issues';
+import { listTestCaseStepOptions } from '@/app/actions/testPackages';
 import { Board } from '@/components/issues/Board';
 import { NewIssueModal } from '@/components/issues/NewIssueModal';
 import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
@@ -16,10 +17,11 @@ export default async function BoardPage({
   const session = await getSessionUser();
   if (!session) redirect('/login');
 
-  const [engagement, issues, teamMembers] = await Promise.all([
+  const [engagement, issues, teamMembers, testCaseStepOptions] = await Promise.all([
     getEngagement(params.engagementId),
     listIssues(params.engagementId),
     listPrometeiaTeam(params.engagementId),
+    listTestCaseStepOptions(params.engagementId),
   ]);
   if (!engagement) redirect('/');
 
@@ -29,6 +31,8 @@ export default async function BoardPage({
         engagementId={engagement.id}
         modules={engagement.modules}
         testCasePackages={engagement.test_case_packages}
+        testCasesEnabled={engagement.test_cases_enabled}
+        testCaseStepOptions={testCaseStepOptions}
         teamMembers={teamMembers}
       />
       <Board issues={issues} teamMembers={teamMembers} isProm={session.profile.is_prometeia} />

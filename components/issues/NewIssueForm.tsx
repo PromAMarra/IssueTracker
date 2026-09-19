@@ -5,19 +5,32 @@ import { useRouter } from 'next/navigation';
 import { createIssue, uploadAttachment } from '@/app/actions/issues';
 import type { Priority } from '@/lib/types';
 import type { TeamMember } from '@/lib/data/engagements';
+import type { TestCaseStepOption } from '@/app/actions/testPackages';
 
 const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
+
+function groupStepOptionsByPackage(options: TestCaseStepOption[]): Record<string, string[]> {
+  const grouped: Record<string, string[]> = {};
+  for (const { packageName, stepName } of options) {
+    (grouped[packageName] ??= []).push(stepName);
+  }
+  return grouped;
+}
 
 export function NewIssueForm({
   engagementId,
   modules,
   testCasePackages,
+  testCasesEnabled,
+  testCaseStepOptions,
   teamMembers,
   onCreated,
 }: {
   engagementId: string;
   modules: string[];
   testCasePackages: string[];
+  testCasesEnabled: boolean;
+  testCaseStepOptions: TestCaseStepOption[];
   teamMembers: TeamMember[];
   onCreated?: () => void;
 }) {
@@ -132,11 +145,21 @@ export function NewIssueForm({
             className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
             <option value="">No test case package</option>
-            {testCasePackages.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
+            {testCasesEnabled
+              ? Object.entries(groupStepOptionsByPackage(testCaseStepOptions)).map(([packageName, stepNames]) => (
+                  <optgroup key={packageName} label={packageName}>
+                    {stepNames.map((stepName) => (
+                      <option key={stepName} value={stepName}>
+                        {stepName}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              : testCasePackages.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
