@@ -20,6 +20,7 @@ const COLUMN_LABELS: Record<Status, string> = {
 };
 
 const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
+const PRIORITY_RANK: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 export function Board({
   issues: initialIssues,
@@ -83,6 +84,7 @@ export function Board({
           <div className="flex flex-col gap-3">
             {issues
               .filter((i) => i.status === status)
+              .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
               .map((issue) => (
                 <div key={issue.id} className="rounded-lg border border-hairline bg-white p-3">
                   <div className="mb-1 flex items-center justify-between">
