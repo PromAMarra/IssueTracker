@@ -14,6 +14,7 @@ import {
   type IssueEmailContext,
 } from '@/lib/email/issueEmails';
 import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
+import { listTestCaseStepOptions } from './testPackages';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
@@ -44,15 +45,23 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
 
   const { data: engagement, error: engagementError } = await supabase
     .from('engagements')
-    .select('modules, test_case_packages')
+    .select('modules, test_case_packages, test_cases_enabled')
     .eq('id', input.engagementId)
     .single();
   if (engagementError) throw engagementError;
   const module = input.module && engagement.modules.includes(input.module) ? input.module : null;
-  const testCasePackage =
-    input.testCasePackage && engagement.test_case_packages.includes(input.testCasePackage)
-      ? input.testCasePackage
-      : null;
+
+  let testCasePackage: string | null = null;
+  if (input.testCasePackage) {
+    if (engagement.test_cases_enabled) {
+      const stepOptions = await listTestCaseStepOptions(input.engagementId);
+      if (stepOptions.some((option) => option.stepName === input.testCasePackage)) {
+        testCasePackage = input.testCasePackage;
+      }
+    } else if (engagement.test_case_packages.includes(input.testCasePackage)) {
+      testCasePackage = input.testCasePackage;
+    }
+  }
 
   let org: Org = session.profile.is_prometeia ? 'prometeia' : 'bank';
   if (!session.profile.is_prometeia) {
