@@ -59,3 +59,25 @@ create policy "test_package_steps_update_bank_sit" on public.test_package_steps 
       and is_engagement_member(tp.engagement_id)
       and not is_prometeia_user()
   ));
+
+-- RLS gates rows, not columns — the Bank/SIT UPDATE policy above would
+-- otherwise let a bank/SIT member rewrite step content or forge
+-- result_updated_by via a direct API call. Pin every column except the
+-- three result fields, mirroring prevent_self_promote()'s pattern in
+-- 0002_rls.sql for the only other UPDATE grant to an untrusted role.
+create or replace function public.test_step_result_only()
+returns trigger as $$
+begin
+  new.step_number       := old.step_number;
+  new.step_name         := old.step_name;
+  new.step_description  := old.step_description;
+  new.expected_outcome  := old.expected_outcome;
+  new.test_package_id   := old.test_package_id;
+  new.result_updated_by := auth.uid();
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+create trigger test_package_steps_result_only
+  before update on public.test_package_steps
+  for each row execute procedure public.test_step_result_only();
