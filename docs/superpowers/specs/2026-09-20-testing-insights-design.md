@@ -25,18 +25,19 @@ B: the Testing Lab execution tab, both already merged).
    `?view=issues|testing`, default `issues` — using the exact same
    query-param-tab pattern the page already uses for `?phase=`. Two labels:
    "Issue Insights" (today's dashboard, unchanged content) and "Testing
-   Insights" (new; only rendered as an option when `engagement.
-   test_cases_enabled` is true — for an engagement without test cases,
-   `?view=testing` falls back to rendering Issue Insights instead: the view
-   computation treats any `?view=testing` request as `issues` when the flag
-   is off, leaving the query param in the URL rather than issuing a real
-   redirect. This differs from Testing Lab's own page, which does redirect
-   to `/board` when visited with the flag off — but Testing Lab has nothing
-   else to render when disabled, whereas the dashboard's default view is
-   always valid content, so there's nowhere it needs to navigate away to. A
-   real redirect would also need to worry about preserving other query
-   params, like `?phase=`, across the redirect, which the fallback avoids
-   for free).
+   Insights" (new — only rendered as an option when `engagement.
+   test_cases_enabled` is true).
+
+   For an engagement without test cases, `?view=testing` falls back to
+   rendering Issue Insights instead: the view computation treats any
+   `?view=testing` request as `issues` when the flag is off, leaving the
+   query param in the URL rather than issuing a real redirect. This differs
+   from Testing Lab's own page, which does redirect to `/board` when
+   visited with the flag off — but Testing Lab has nothing else to render
+   when disabled, whereas the dashboard's default view is always valid
+   content, so there's nowhere it needs to navigate away to. A real
+   redirect would also need to worry about preserving other query params,
+   like `?phase=`, across the redirect, which the fallback avoids for free.
 2. **No new tables or migration.** One new Server Action,
    `listTestPackagesWithResults`, reads the same `test_packages`/
    `test_package_steps` schema Sub-project A created — just a lighter
@@ -61,8 +62,11 @@ B: the Testing Lab execution tab, both already merged).
    different questions when both periods are configured.) Neither period
    configured: a placeholder message, matching `DailyDefectsChart`'s own
    existing placeholder pattern exactly.
-   - **Actual line**: cumulative count of steps with a non-null `result`
-     whose `result_updated_at` falls on or before each day, capped at
+   - **Actual line**: cumulative count of steps with a non-null `result`,
+     counted from day one if `result_updated_at` is null (a result
+     pre-filled in the uploaded sheet, which Sub-project A's upload never
+     timestamps — only recording a result via the Testing Lab tab does),
+     or from the day `result_updated_at` falls on otherwise. Capped at
      today (no data point for future days — the line simply stops, which
      `recharts` renders correctly when a data point's value is `null`).
    - **Target line**: a straight reference from `(period start, 0)` to
@@ -163,10 +167,11 @@ already sits at a small positive value (one day's worth of expected
 progress), not exactly zero, for a period long enough to show the
 difference at the rounding precision used; this is deliberate, since day
 one already represents a full day of expected progress, not a bug. A
-misconfigured period (`endDate <= startDate`) returns an empty array: the
+misconfigured period (`endDate < startDate`) returns an empty array: the
 day-walk `while` loop that builds the list of days never executes when
 `startDate` is after `endDate`, so the per-day callback that computes
-`targetCumulative` never runs at all.
+`targetCumulative` never runs at all. (`endDate === startDate` is not
+misconfigured — it's a valid one-day period, and returns a single point.)
 
 ## New components
 
@@ -185,10 +190,13 @@ day-walk `while` loop that builds the list of days never executes when
 
 - `lib/testPackageDashboard.test.ts` (new): `testedTrend` — a mix of tested
   (with varying `resultUpdatedAt` days) and untested steps produces the
-  right cumulative counts per day; the target line is exactly linear
-  (spot-check the midpoint of a period is ~50% of total); a day after `now`
-  has `cumulativeTested: null`; a misconfigured period (`end <= start`)
-  doesn't throw or divide by zero. `perPackageResultBreakdown` — a package
+  right cumulative counts per day, including a step with a null
+  `resultUpdatedAt` counting from day one; the target line measures elapsed
+  time to end-of-day (day one sits above zero, not at exactly zero, for a
+  period large enough to show it); a day after `now` has
+  `cumulativeTested: null`; a misconfigured period (`end < start`) returns
+  an empty array rather than throwing or dividing by zero.
+  `perPackageResultBreakdown` — a package
   with a mix of all five states counts each correctly; an empty steps array
   returns all zeros; multiple packages are each computed independently.
 - `tsc --noEmit`, `npm test`, `npm run build` clean, as every prior task
