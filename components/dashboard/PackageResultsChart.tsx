@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   Bar,
   BarChart,
@@ -101,7 +102,7 @@ export function PackageResultsChart({ data }: { data: PackageResultBreakdown[] }
   const rowHeight = 32;
   const height = Math.max(160, data.length * rowHeight + 56);
   const lastSeries = RESULT_SERIES[RESULT_SERIES.length - 1];
-  const totalLabel = makeTotalLabel(data);
+  const totalLabel = useMemo(() => makeTotalLabel(data), [data]);
 
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">

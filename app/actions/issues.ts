@@ -14,7 +14,6 @@ import {
   type IssueEmailContext,
 } from '@/lib/email/issueEmails';
 import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
-import { listTestCaseStepOptions } from './testPackages';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
@@ -55,8 +54,13 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
   let testCasePackage: string | null = null;
   if (input.testCasePackage) {
     if (engagement.test_cases_enabled) {
-      const stepOptions = await listTestCaseStepOptions(input.engagementId);
-      if (stepOptions.some((option) => option.stepName === input.testCasePackage)) {
+      const { count, error: stepCheckError } = await supabase
+        .from('test_package_steps')
+        .select('id, test_packages!inner(engagement_id)', { count: 'exact', head: true })
+        .eq('step_name', input.testCasePackage)
+        .eq('test_packages.engagement_id', input.engagementId);
+      if (stepCheckError) throw stepCheckError;
+      if (count && count > 0) {
         testCasePackage = input.testCasePackage;
       }
     } else if (engagement.test_case_packages.includes(input.testCasePackage)) {

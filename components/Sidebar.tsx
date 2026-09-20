@@ -37,6 +37,10 @@ export function Sidebar({
   testPackages: { id: string; name: string }[];
 }) {
   const pathname = usePathname();
+  // Subscribes to every search-param change app-wide (React context has no
+  // per-key selector), even though only the testing-lab route below ever
+  // reads a key from it. A narrower subscription would require splitting the
+  // package sub-nav out into its own client component — not done here.
   const searchParams = useSearchParams();
   const active = activeNavSection(pathname, engagementId);
   const sections = NAV_SECTIONS.filter(
