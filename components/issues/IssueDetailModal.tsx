@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { IconClock, IconHistory, IconMessage, IconPaperclip, IconX } from '@tabler/icons-react';
 import {
   addComment,
-  disputeRejection,
+  changeStatusWithNote,
   getIssueDetail,
   updateIssueAssignee,
   updateIssueModule,
@@ -17,7 +17,7 @@ import {
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { CollapsibleSection } from './CollapsibleSection';
-import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
+import { BANK_SIT_ALLOWED_TRANSITIONS, canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
 import { statusDurations } from '@/lib/kpi';
 import { PRIORITIES, STATUSES } from '@/lib/types';
 import type { Priority, Status } from '@/lib/types';
@@ -60,6 +60,8 @@ export function IssueDetailModal({
   const commentFileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<Status | null>(null);
+  const [statusNote, setStatusNote] = useState('');
 
   async function reload() {
     try {
@@ -73,6 +75,8 @@ export function IssueDetailModal({
 
   useEffect(() => {
     reload();
+    setPendingStatus(null);
+    setStatusNote('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issueId]);
 
@@ -117,6 +121,23 @@ export function IssueDetailModal({
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add your comment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitStatusChange(e: FormEvent) {
+    e.preventDefault();
+    if (!pendingStatus || !statusNote.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await changeStatusWithNote(issueId, pendingStatus, statusNote.trim());
+      setPendingStatus(null);
+      setStatusNote('');
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {
       setBusy(false);
     }
@@ -262,22 +283,69 @@ export function IssueDetailModal({
             </label>
           </div>
         ) : (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <StatusBadge status={issue.status} />
-            <PriorityBadge priority={issue.priority} />
-            {issue.module && <span className="text-xs text-ink-soft">{issue.module}</span>}
-            {assigneeName && <span className="text-xs text-ink-soft">Assigned: {assigneeName}</span>}
-            {issue.status === 'rejected' && (
-              <>
-                <button
-                  onClick={() => handleField(() => disputeRejection(issueId))}
-                  disabled={busy}
-                  className="rounded-md border border-brand-blue px-3 py-1.5 text-xs font-bold text-brand-blue hover:bg-brand-blue hover:text-white disabled:opacity-60"
-                >
-                  Send back to Prometeia
-                </button>
-                <span className="text-xs text-ink-soft">Disagree with this rejection? Send it back to Prometeia.</span>
-              </>
+          <div className="mb-6 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {BANK_SIT_ALLOWED_TRANSITIONS[issue.status] ? (
+                <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
+                  Status
+                  <select
+                    value={pendingStatus ?? issue.status}
+                    disabled={busy}
+                    onChange={(e) => setPendingStatus(e.target.value as Status)}
+                    className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
+                  >
+                    <option value={issue.status}>{STATUS_LABELS[issue.status]}</option>
+                    {BANK_SIT_ALLOWED_TRANSITIONS[issue.status]!.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <StatusBadge status={issue.status} />
+              )}
+              <PriorityBadge priority={issue.priority} />
+              {issue.module && <span className="text-xs text-ink-soft">{issue.module}</span>}
+              {assigneeName && <span className="text-xs text-ink-soft">Assigned: {assigneeName}</span>}
+            </div>
+            {pendingStatus && pendingStatus !== issue.status && (
+              <form
+                onSubmit={submitStatusChange}
+                className="flex flex-col gap-2 rounded-md border border-ink-soft/20 bg-brand-gray-light p-3"
+              >
+                <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
+                  Note explaining this change (required)
+                  <textarea
+                    required
+                    autoFocus
+                    value={statusNote}
+                    onChange={(e) => setStatusNote(e.target.value)}
+                    rows={2}
+                    className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal text-ink"
+                  />
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={busy || !statusNote.trim()}
+                    className="rounded-md bg-brand-blue px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-active disabled:opacity-60"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPendingStatus(null);
+                      setStatusNote('');
+                    }}
+                    className="rounded-md border border-ink-soft/30 px-3 py-1.5 text-xs font-medium text-ink hover:bg-primary-soft disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         )}

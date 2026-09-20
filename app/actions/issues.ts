@@ -13,7 +13,7 @@ import {
   statusEmailLabel,
   type IssueEmailContext,
 } from '@/lib/email/issueEmails';
-import { canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
+import { BANK_SIT_ALLOWED_TRANSITIONS, canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
 export type CreateIssueInput = {
@@ -333,16 +333,26 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
-// The one status change a Bank/SIT (non-Prometeia) member is allowed to make
-// (see requireProm() above, which gates every other mutation in this file):
-// while a ticket is 'rejected', they may send it back to Prometeia rather
-// than leaving a rejection they disagree with stuck. The RLS policy and
-// trigger in 0019_dispute_rejection.sql enforce the same narrowing at the DB
-// layer — this check is defense in depth, not the real gate.
-export async function disputeRejection(issueId: string): Promise<MutationResult> {
+// The only status changes a Bank/SIT (non-Prometeia) member is allowed to
+// make (see requireProm() above, which gates every other mutation in this
+// file): disputing a rejection sends it back to Prometeia, and resolving a
+// Ready For Test ticket themselves — Closed if the fix works, Rejected if it
+// doesn't — per BANK_SIT_ALLOWED_TRANSITIONS (lib/issueAccess.ts). Every one
+// of these requires a note explaining why, recorded as a normal comment. The
+// RLS policy and trigger in 0021_bank_sit_transitions.sql enforce the same
+// narrowing at the DB layer — this check is defense in depth, not the real
+// gate.
+export async function changeStatusWithNote(
+  issueId: string,
+  newStatus: Status,
+  note: string,
+): Promise<MutationResult> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   if (session.profile.is_prometeia) throw new Error('Not authorized');
+
+  const trimmedNote = note.trim();
+  if (!trimmedNote) throw new Error("Please explain why you're changing this ticket's status.");
 
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -351,24 +361,40 @@ export async function disputeRejection(issueId: string): Promise<MutationResult>
     .eq('id', issueId)
     .single();
   if (fetchError) throw fetchError;
-  if (current.status !== 'rejected') {
-    throw new Error('This ticket is no longer rejected.');
+
+  const currentStatus = current.status as Status;
+  const allowed = BANK_SIT_ALLOWED_TRANSITIONS[currentStatus] ?? [];
+  if (!allowed.includes(newStatus)) {
+    throw new Error('This status change is not allowed.');
   }
 
-  const newStatus: Status = 'ongoing';
+  // Post the note as a normal comment BEFORE changing the status: comment
+  // posting is gated by whose "turn" it is (canPostOnIssue), and both
+  // 'rejected' and 'ready_for_test' are currently Bank/SIT's turn — but the
+  // status this action sets next ('ongoing' for a dispute) is Prometeia's
+  // turn, which would otherwise lock the actor out of posting their own
+  // explanation a moment too late.
+  await addComment(issueId, trimmedNote);
+
+  const isClosing = newStatus === 'closed';
+  const patch: Record<string, unknown> = {
+    status: newStatus,
+    closed_at: isClosing ? new Date().toISOString() : null,
+  };
+
   // Optimistic-concurrency guard — see updateIssueStatus for why.
   const { data: updated, error } = await supabase
     .from('issues')
-    .update({ status: newStatus })
+    .update(patch)
     .eq('id', issueId)
-    .eq('status', 'rejected')
+    .eq('status', currentStatus)
     .select(ISSUE_PATCH_SELECT)
     .maybeSingle();
   if (error) throw error;
   if (!updated) throw new Error(CONFLICT_MESSAGE);
 
   const newHistory: HistoryPatchEntry[] = [
-    await recordHistory(supabase, issueId, 'status', 'rejected', newStatus, session.id),
+    await recordHistory(supabase, issueId, 'status', currentStatus, newStatus, session.id),
   ];
 
   const reporterId = current.reporter_id as string;
