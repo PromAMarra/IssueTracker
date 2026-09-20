@@ -40,7 +40,7 @@ export default async function TestingLabPage({
       ? searchParams.package
       : packages[0].id;
 
-  const detail = await getTestPackageDetail(activePackageId);
+  const detail = await getTestPackageDetail(params.engagementId, activePackageId);
 
   return (
     <div className="flex flex-col gap-4">

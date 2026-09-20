@@ -84,6 +84,7 @@ export async function uploadTestPackage(
   }
 
   revalidatePath(`/${engagementId}/settings`);
+  revalidatePath(`/${engagementId}/testing-lab`);
   return { packageId: pkg.id as string, stepCount: parsed.steps.length };
 }
 
@@ -100,6 +101,7 @@ export async function deleteTestPackage(engagementId: string, packageId: string)
   if (error) throw error;
   if (!data) throw new Error('This test package could not be deleted — it may already be gone.');
   revalidatePath(`/${engagementId}/settings`);
+  revalidatePath(`/${engagementId}/testing-lab`);
 }
 
 export async function listTestPackages(engagementId: string): Promise<TestPackageSummary[]> {
@@ -137,7 +139,7 @@ export type TestPackageDetail = {
   steps: TestPackageStepDetail[];
 };
 
-export async function getTestPackageDetail(packageId: string): Promise<TestPackageDetail> {
+export async function getTestPackageDetail(engagementId: string, packageId: string): Promise<TestPackageDetail> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   const supabase = createServerClient();
@@ -147,8 +149,10 @@ export async function getTestPackageDetail(packageId: string): Promise<TestPacka
       'id, name, test_package_steps(id, step_number, step_name, step_description, expected_outcome, result)',
     )
     .eq('id', packageId)
-    .single();
+    .eq('engagement_id', engagementId)
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('This test package could not be found.');
   const row = data as unknown as {
     id: string;
     name: string;
