@@ -104,6 +104,21 @@ export async function deleteTestPackage(engagementId: string, packageId: string)
   revalidatePath(`/${engagementId}/testing-lab`);
 }
 
+export type TestPackageName = { id: string; name: string };
+
+export async function listTestPackageNames(engagementId: string): Promise<TestPackageName[]> {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('test_packages')
+    .select('id, name')
+    .eq('engagement_id', engagementId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as TestPackageName[];
+}
+
 export async function listTestPackages(engagementId: string): Promise<TestPackageSummary[]> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
