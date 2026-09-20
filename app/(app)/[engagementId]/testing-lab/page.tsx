@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
 import { getTestPackageDetail, listTestCaseStepOptions, listTestPackages } from '@/app/actions/testPackages';
-import { PackageTabs } from '@/components/testinglab/PackageTabs';
 import { TestPackageView } from '@/components/testinglab/TestPackageView';
 
 export default async function TestingLabPage({
@@ -43,18 +42,15 @@ export default async function TestingLabPage({
   const detail = await getTestPackageDetail(params.engagementId, activePackageId);
 
   return (
-    <div className="flex flex-col gap-4">
-      <PackageTabs engagementId={params.engagementId} packages={packages} activePackageId={activePackageId} />
-      <TestPackageView
-        key={activePackageId}
-        engagementId={params.engagementId}
-        detail={detail}
-        isProm={session.profile.is_prometeia}
-        modules={engagement.modules}
-        teamMembers={teamMembers}
-        testCasesEnabled={engagement.test_cases_enabled}
-        testCaseStepOptions={testCaseStepOptions}
-      />
-    </div>
+    <TestPackageView
+      key={activePackageId}
+      engagementId={params.engagementId}
+      detail={detail}
+      isProm={session.profile.is_prometeia}
+      modules={engagement.modules}
+      teamMembers={teamMembers}
+      testCasesEnabled={engagement.test_cases_enabled}
+      testCaseStepOptions={testCaseStepOptions}
+    />
   );
 }

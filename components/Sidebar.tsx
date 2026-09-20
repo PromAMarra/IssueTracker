@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { IconChartLine, IconClipboardCheck, IconLayoutKanban, IconList, IconMenu2, IconSettings, type Icon } from '@tabler/icons-react';
 import { activeNavSection, NAV_SECTIONS, type NavSectionKey } from '@/lib/navSections';
 
@@ -20,16 +20,26 @@ export function Sidebar({
   engagementId,
   isProm,
   testCasesEnabled,
+  testPackages,
 }: {
   engagementId: string;
   isProm: boolean;
   testCasesEnabled: boolean;
+  testPackages: { id: string; name: string }[];
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const active = activeNavSection(pathname, engagementId);
   const sections = NAV_SECTIONS.filter(
     (s) => (s.key !== 'settings' || isProm) && (s.key !== 'testing-lab' || testCasesEnabled),
   );
+
+  // On the Testing Lab route itself, default the highlight to the first
+  // package when no `?package=` is present — mirrors the page's own
+  // fallback so the sidebar never shows nothing selected while a package
+  // is in fact being shown.
+  const activePackageId =
+    active === 'testing-lab' ? (searchParams.get('package') ?? testPackages[0]?.id ?? null) : null;
 
   // Collapse only applies at desktop widths (see the `md:` classes below) —
   // on narrow viewports the sidebar always shows full labels, since the
@@ -80,23 +90,43 @@ export function Sidebar({
         const isActive = section.key === active;
         const SectionIcon = ICONS[section.key];
         return (
-          <Link
-            key={section.key}
-            href={`/${engagementId}/${section.key}`}
-            aria-current={isActive ? 'page' : undefined}
-            aria-label={section.label}
-            title={section.label}
-            className={`flex items-center gap-3 border-l-4 px-4 py-3 text-sm font-bold ${
-              collapsed ? 'md:justify-center md:gap-0 md:px-0' : ''
-            } ${
-              isActive
-                ? 'border-brand-green bg-primary-active text-white'
-                : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <SectionIcon className="h-4 w-4 shrink-0" stroke={1.5} />
-            <span className={collapsed ? 'md:hidden' : ''}>{section.label}</span>
-          </Link>
+          <div key={section.key}>
+            <Link
+              href={`/${engagementId}/${section.key}`}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={section.label}
+              title={section.label}
+              className={`flex items-center gap-3 border-l-4 px-4 py-3 text-sm font-bold ${
+                collapsed ? 'md:justify-center md:gap-0 md:px-0' : ''
+              } ${
+                isActive
+                  ? 'border-brand-green bg-primary-active text-white'
+                  : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <SectionIcon className="h-4 w-4 shrink-0" stroke={1.5} />
+              <span className={collapsed ? 'md:hidden' : ''}>{section.label}</span>
+            </Link>
+            {section.key === 'testing-lab' && testPackages.length > 0 && (
+              <div className={collapsed ? 'md:hidden' : ''}>
+                {testPackages.map((pkg) => (
+                  <Link
+                    key={pkg.id}
+                    href={`/${engagementId}/testing-lab?package=${pkg.id}`}
+                    aria-current={pkg.id === activePackageId ? 'page' : undefined}
+                    title={pkg.name}
+                    className={`block truncate border-l-4 py-2 pl-12 pr-4 text-sm font-medium ${
+                      pkg.id === activePackageId
+                        ? 'border-brand-green bg-primary-active text-white'
+                        : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {pkg.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         );
       })}
     </nav>

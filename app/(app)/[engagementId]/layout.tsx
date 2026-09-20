@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listAccessibleEngagements } from '@/lib/data/engagements';
 import { getPlatformSettings } from '@/lib/data/settings';
+import { listTestPackages } from '@/app/actions/testPackages';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -23,6 +24,8 @@ export default async function EngagementLayout({
   ]);
   if (!engagement) notFound();
 
+  const testPackages = engagement.test_cases_enabled ? await listTestPackages(engagement.id) : [];
+
   return (
     <div className="flex min-h-screen flex-col bg-surface">
       <Header
@@ -36,6 +39,7 @@ export default async function EngagementLayout({
           engagementId={engagement.id}
           isProm={session.profile.is_prometeia}
           testCasesEnabled={engagement.test_cases_enabled}
+          testPackages={testPackages}
         />
         <main className="min-w-0 flex-1 px-6 py-6">
           <Breadcrumbs engagementId={engagement.id} />

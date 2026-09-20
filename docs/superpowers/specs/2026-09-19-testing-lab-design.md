@@ -33,14 +33,22 @@ this afterward.
    (mirrors Settings' redirect for non-Prometeia — a direct URL visit to a
    feature that isn't enabled for this engagement shouldn't 404, it should
    bounce somewhere useful).
-3. **Package tabs**: server-rendered links using a `?package=<id>` query
-   param — the same pattern the dashboard already uses for its
-   `?phase=sit|uat` tabs, and the board/list use for `?issue=<id>`. No new
-   navigation pattern introduced. Defaults to the first package
-   (`listTestPackages`'s existing order — newest-first) when no `package` is
-   given, or when no packages exist yet a plain "No test packages uploaded
-   yet — ask Prometeia to upload one in Settings" message replaces the tabs
-   and table entirely.
+3. **Package switching**: indented sub-links in `Sidebar`, nested under the
+   "Testing Lab" nav item (one per uploaded package), rather than an in-page
+   tab row — corrected after initial delivery per user feedback that in-page
+   tabs weren't user-friendly, using `?package=<id>` query params (the same
+   mechanism the dashboard already uses for its `?phase=sit|uat` tabs, and
+   the board/list use for `?issue=<id>`) to carry the selection, just
+   surfaced in the sidebar instead of the page body. `layout.tsx` fetches
+   `listTestPackages` (when `test_cases_enabled`) and passes it to `Sidebar`
+   as a new `testPackages` prop; `Sidebar` reads the active `?package=` via
+   `useSearchParams()` to highlight the current one, defaulting to the first
+   package (`listTestPackages`'s existing order — newest-first) when no
+   `package` param is present. Sub-items are hidden when the sidebar is
+   collapsed to icon-only. The page itself applies the same default-to-first
+   fallback for its own data fetch, or when no packages exist yet a plain
+   "No test packages uploaded yet — ask Prometeia to upload one in Settings"
+   message replaces the table entirely.
 4. **No new tables or migration.** This sub-project reads and writes the
    exact schema Sub-project A already created (`test_packages`,
    `test_package_steps`, `updateTestStepResult`). One new Server Action is
@@ -82,7 +90,8 @@ testing-lab/page.tsx (server)
   → getTestPackageDetail(activePackageId)  [new]
   → listPrometeiaTeam(engagementId)        [existing, for the ticket form]
   → listTestCaseStepOptions(engagementId)  [Sub-project A, for the ticket form's own dropdown]
-  → renders PackageTabs (server) + TestPackageView (client)
+  → renders TestPackageView (client); package switching is rendered by
+    Sidebar (in the shared layout), not this page
 
 TestPackageView (client)
   → KPIs rendered via components/dashboard/StatTile.tsx (existing, reused as-is)
@@ -160,12 +169,14 @@ itself must not divide by zero) returns all percentages as `0`.
 ## Files touched
 
 - `lib/navSections.ts` — add `'testing-lab'` to `NavSectionKey`/`NAV_SECTIONS`
-- `components/Sidebar.tsx` — new `testCasesEnabled` prop, filter, icon
-- `app/(app)/[engagementId]/layout.tsx` — pass `testCasesEnabled` to `Sidebar`
+- `components/Sidebar.tsx` — new `testCasesEnabled` and `testPackages` props,
+  filter, icon, indented package sub-links with `useSearchParams()`-based
+  active highlighting
+- `app/(app)/[engagementId]/layout.tsx` — pass `testCasesEnabled` and
+  `listTestPackages` result to `Sidebar`
 - `app/actions/testPackages.ts` — add `getTestPackageDetail`
 - `lib/testPackageKpi.ts` (new) + `lib/testPackageKpi.test.ts` (new)
 - `app/(app)/[engagementId]/testing-lab/page.tsx` (new)
-- `components/testinglab/PackageTabs.tsx` (new)
 - `components/testinglab/ResultBadge.tsx` (new)
 - `components/testinglab/TestPackageView.tsx` (new) — the client component
   owning result-editing state and the open-ticket modal
