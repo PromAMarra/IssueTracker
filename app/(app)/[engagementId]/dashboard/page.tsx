@@ -32,6 +32,7 @@ import { testPackageKpis } from '@/lib/testPackageKpi';
 import { perPackageResultBreakdown, testedTrend } from '@/lib/testPackageDashboard';
 import { TestedTrendChart } from '@/components/dashboard/TestedTrendChart';
 import { PackageResultsChart } from '@/components/dashboard/PackageResultsChart';
+import { TestPackageFilter } from '@/components/dashboard/TestPackageFilter';
 
 const PHASE_ORG: Record<'sit' | 'uat', 'sit' | 'bank'> = { sit: 'sit', uat: 'bank' };
 
@@ -103,7 +104,8 @@ export default async function DashboardPage({
     : testPackages;
   const allTestSteps = filteredTestPackages.flatMap((p) => p.steps);
   const testKpis = testPackageKpis(allTestSteps);
-  const testSitTrend = sitPeriod ? testedTrend(allTestSteps, sitPeriod.start, sitPeriod.end, now) : null;
+  const testSitTrend =
+    sitPeriod && engagement.sit_expected ? testedTrend(allTestSteps, sitPeriod.start, sitPeriod.end, now) : null;
   const testUatTrend = uatPeriod ? testedTrend(allTestSteps, uatPeriod.start, uatPeriod.end, now) : null;
   const packageBreakdown = perPackageResultBreakdown(testPackages);
 
@@ -111,11 +113,6 @@ export default async function DashboardPage({
   const viewClass = (value: 'issues' | 'testing') =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${
       view === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
-    }`;
-  const testPackageLink = (id: string | null) => (id ? `?view=testing&testPackage=${id}` : '?view=testing');
-  const testPackageClass = (id: string | null) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium ${
-      testPackageFilter === id ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
     }`;
 
   return (
@@ -133,20 +130,20 @@ export default async function DashboardPage({
 
       {view === 'issues' && (
         <>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-1">
-              <Link href={phaseLink(null)} className={phaseClass(null)}>
-                All
-              </Link>
-              {engagement.sit_expected && (
+          <div className={`flex items-center gap-2 ${engagement.sit_expected ? 'justify-between' : 'justify-end'}`}>
+            {engagement.sit_expected && (
+              <div className="flex gap-1">
+                <Link href={phaseLink(null)} className={phaseClass(null)}>
+                  All
+                </Link>
                 <Link href={phaseLink('sit')} className={phaseClass('sit')}>
                   SIT
                 </Link>
-              )}
-              <Link href={phaseLink('uat')} className={phaseClass('uat')}>
-                UAT
-              </Link>
-            </div>
+                <Link href={phaseLink('uat')} className={phaseClass('uat')}>
+                  UAT
+                </Link>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <ExportDashboardButton
                 engagementName={engagement.name}
@@ -200,23 +197,14 @@ export default async function DashboardPage({
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap gap-1">
-                <Link href={testPackageLink(null)} className={testPackageClass(null)}>
-                  All packages
-                </Link>
-                {testPackages.map((p) => (
-                  <Link key={p.id} href={testPackageLink(p.id)} className={testPackageClass(p.id)}>
-                    {p.name}
-                  </Link>
-                ))}
-              </div>
+              <TestPackageFilter packages={testPackages} activeId={testPackageFilter} />
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <StatTile label="Total tests" value={String(testKpis.total)} />
                 <StatTile label="% tested" value={`${testKpis.testedPercent}%`} />
                 <StatTile label="% failed" value={`${testKpis.failedPercent}%`} />
                 <StatTile label="% to be tested" value={`${testKpis.toBeTestedPercent}%`} />
               </div>
-              {!sitPeriod && !uatPeriod ? (
+              {!testSitTrend && !testUatTrend ? (
                 <div className="rounded-lg border border-hairline bg-white p-4">
                   <h3 className="mb-1 text-sm font-bold text-ink">Tested vs. target pace</h3>
                   <p className="text-sm text-ink-soft">
@@ -224,9 +212,9 @@ export default async function DashboardPage({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {sitPeriod && testSitTrend && <TestedTrendChart label="SIT" period={sitPeriod} points={testSitTrend} />}
-                  {uatPeriod && testUatTrend && <TestedTrendChart label="UAT" period={uatPeriod} points={testUatTrend} />}
+                <div className="flex flex-col gap-4">
+                  {testSitTrend && sitPeriod && <TestedTrendChart label="SIT" period={sitPeriod} points={testSitTrend} />}
+                  {testUatTrend && uatPeriod && <TestedTrendChart label="UAT" period={uatPeriod} points={testUatTrend} />}
                 </div>
               )}
               <PackageResultsChart data={packageBreakdown} />
