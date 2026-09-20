@@ -3,7 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { IconChartLine, IconClipboardCheck, IconLayoutKanban, IconList, IconMenu2, IconSettings, type Icon } from '@tabler/icons-react';
+import {
+  IconChartLine,
+  IconChevronRight,
+  IconClipboardCheck,
+  IconLayoutKanban,
+  IconList,
+  IconMenu2,
+  IconSettings,
+  type Icon,
+} from '@tabler/icons-react';
 import { activeNavSection, NAV_SECTIONS, type NavSectionKey } from '@/lib/navSections';
 
 const ICONS: Record<NavSectionKey, Icon> = {
@@ -53,6 +62,13 @@ export function Sidebar({
   // flash on load — an accepted tradeoff of this SSR-safe pattern.
   const [collapsed, setCollapsed] = useState(false);
 
+  // Whether the Testing Lab package sub-list is expanded. `null` means the
+  // user hasn't manually toggled it yet, so it falls back to auto-expanding
+  // when the user is actually on a /testing-lab route. Once they click the
+  // chevron, their explicit choice sticks instead of being forced back open
+  // or closed on every re-render.
+  const [manualExpanded, setManualExpanded] = useState<boolean | null>(null);
+
   useEffect(() => {
     try {
       setCollapsed(localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true');
@@ -89,26 +105,49 @@ export function Sidebar({
       {sections.map((section) => {
         const isActive = section.key === active;
         const SectionIcon = ICONS[section.key];
+        // Testing Lab's own row must never share the "selected" highlight
+        // with one of its package sub-items — showing both at once reads as
+        // two things being selected. When it has packages, a sub-item is
+        // always what should read as selected instead.
+        const hasPackages = section.key === 'testing-lab' && testPackages.length > 0;
+        const parentHighlighted = isActive && !hasPackages;
+        const packagesExpanded = hasPackages && (manualExpanded ?? active === 'testing-lab');
         return (
           <div key={section.key}>
-            <Link
-              href={`/${engagementId}/${section.key}`}
-              aria-current={isActive ? 'page' : undefined}
-              aria-label={section.label}
-              title={section.label}
-              className={`flex items-center gap-3 border-l-4 px-4 py-3 text-sm font-bold ${
-                collapsed ? 'md:justify-center md:gap-0 md:px-0' : ''
-              } ${
-                isActive
-                  ? 'border-brand-green bg-primary-active text-white'
-                  : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <SectionIcon className="h-4 w-4 shrink-0" stroke={1.5} />
-              <span className={collapsed ? 'md:hidden' : ''}>{section.label}</span>
-            </Link>
-            {section.key === 'testing-lab' && testPackages.length > 0 && (
-              <div className={collapsed ? 'md:hidden' : ''}>
+            <div className="flex items-stretch">
+              <Link
+                href={`/${engagementId}/${section.key}`}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={section.label}
+                title={section.label}
+                className={`flex flex-1 items-center gap-3 border-l-4 px-4 py-3 text-sm font-bold ${
+                  collapsed ? 'md:justify-center md:gap-0 md:px-0' : ''
+                } ${
+                  parentHighlighted
+                    ? 'border-brand-green bg-primary-active text-white'
+                    : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <SectionIcon className="h-4 w-4 shrink-0" stroke={1.5} />
+                <span className={collapsed ? 'md:hidden' : ''}>{section.label}</span>
+              </Link>
+              {hasPackages && !collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setManualExpanded(!packagesExpanded)}
+                  aria-label={packagesExpanded ? 'Collapse test packages' : 'Expand test packages'}
+                  aria-expanded={packagesExpanded}
+                  className="flex items-center px-3 text-primary-soft/70 hover:text-white"
+                >
+                  <IconChevronRight
+                    className={`h-4 w-4 shrink-0 transition-transform ${packagesExpanded ? 'rotate-90' : ''}`}
+                    stroke={1.5}
+                  />
+                </button>
+              )}
+            </div>
+            {hasPackages && packagesExpanded && !collapsed && (
+              <div>
                 {testPackages.map((pkg) => (
                   <Link
                     key={pkg.id}
