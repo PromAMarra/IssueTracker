@@ -85,7 +85,7 @@ testing-lab/page.tsx (server)
   → renders PackageTabs (server) + TestPackageView (client)
 
 TestPackageView (client)
-  → TestPackageKpiStrip (presentational)
+  → KPIs rendered via components/dashboard/StatTile.tsx (existing, reused as-is)
   → table of steps, each row:
       - Bank/SIT: <select> → updateTestStepResult(stepId, result) [Sub-project A, unchanged]
       - Prometeia: <ResultBadge>
@@ -167,7 +167,6 @@ itself must not divide by zero) returns all percentages as `0`.
 - `app/(app)/[engagementId]/testing-lab/page.tsx` (new)
 - `components/testinglab/PackageTabs.tsx` (new)
 - `components/testinglab/ResultBadge.tsx` (new)
-- `components/testinglab/TestPackageKpiStrip.tsx` (new)
 - `components/testinglab/TestPackageView.tsx` (new) — the client component
   owning result-editing state and the open-ticket modal
 - `components/issues/NewIssueForm.tsx` — add optional `initialTestCasePackage` prop

@@ -16,7 +16,7 @@
 - Every mutation goes through an existing Server Action (`updateTestStepResult`, already built in Sub-project A) — nothing in this plan adds a new mutation.
 - Only pure logic under `lib/` gets a Vitest unit test in this repo; Server Actions and components are verified via `tsc --noEmit` / `npm run build` only — no `*.test.tsx` file exists anywhere in this repo, and this plan doesn't start one.
 - Reuse existing components where they already do the job: `components/dashboard/StatTile.tsx` for KPI tiles (do not create a new KPI-tile component).
-- Match existing code style exactly: Tailwind classes, Tabler Icons with `stroke={1.5}`, the dashboard's `?phase=`-style query-param tab pattern, Board.tsx's optimistic-update-with-revert-on-error pattern for the result dropdown.
+- Match existing code style exactly: Tailwind classes, Tabler Icons with `stroke={1.5}`, the dashboard's `?phase=`-style query-param tab pattern. The result dropdown needs a genuinely new pattern not present elsewhere in this codebase: optimistic local update, then revert the specific row (not the whole list) if the save fails — Board.tsx's own pattern never reverts, since it never writes optimistically before the server confirms.
 
 ---
 
