@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
-import { getTestPackageDetail, listTestCaseStepOptions, listTestPackages } from '@/app/actions/testPackages';
+import { getTestPackageDetail, listTestCaseStepOptions, listTestPackageNames } from '@/app/actions/testPackages';
 import { TestPackageView } from '@/components/testinglab/TestPackageView';
 
 export default async function TestingLabPage({
@@ -19,7 +19,7 @@ export default async function TestingLabPage({
   if (!engagement.test_cases_enabled) redirect(`/${params.engagementId}/board`);
 
   const [packages, teamMembers, testCaseStepOptions] = await Promise.all([
-    listTestPackages(params.engagementId),
+    listTestPackageNames(params.engagementId),
     listPrometeiaTeam(params.engagementId),
     listTestCaseStepOptions(params.engagementId),
   ]);

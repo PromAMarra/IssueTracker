@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listAccessibleEngagements } from '@/lib/data/engagements';
 import { getPlatformSettings } from '@/lib/data/settings';
-import { listTestPackages } from '@/app/actions/testPackages';
+import { listTestPackageNames } from '@/app/actions/testPackages';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -24,7 +24,7 @@ export default async function EngagementLayout({
   ]);
   if (!engagement) notFound();
 
-  const testPackages = engagement.test_cases_enabled ? await listTestPackages(engagement.id) : [];
+  const testPackages = engagement.test_cases_enabled ? await listTestPackageNames(engagement.id) : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-surface">
