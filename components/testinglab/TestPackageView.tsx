@@ -66,7 +66,7 @@ export function TestPackageView({
     setError(null);
     setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result } : s)));
     try {
-      await updateTestStepResult(stepId, result);
+      await updateTestStepResult(stepId, result, previousResult);
     } catch (err) {
       setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result: previousResult } : s)));
       setError(err instanceof Error ? err.message : 'Could not save this result.');
