@@ -216,3 +216,32 @@ export async function listTestCaseStepOptions(engagementId: string): Promise<Tes
       .map((step) => ({ packageName: pkg.name, stepName: step.step_name })),
   );
 }
+
+export type TestPackageWithResults = {
+  id: string;
+  name: string;
+  steps: { result: TestResult | null; resultUpdatedAt: string | null }[];
+};
+
+export async function listTestPackagesWithResults(engagementId: string): Promise<TestPackageWithResults[]> {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('test_packages')
+    .select('id, name, test_package_steps(result, result_updated_at)')
+    .eq('engagement_id', engagementId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (
+    data as unknown as {
+      id: string;
+      name: string;
+      test_package_steps: { result: TestResult | null; result_updated_at: string | null }[];
+    }[]
+  ).map((pkg) => ({
+    id: pkg.id,
+    name: pkg.name,
+    steps: pkg.test_package_steps.map((s) => ({ result: s.result, resultUpdatedAt: s.result_updated_at })),
+  }));
+}
