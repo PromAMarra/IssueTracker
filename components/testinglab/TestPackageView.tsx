@@ -68,12 +68,12 @@ export function TestPackageView({
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-hairline text-xs uppercase tracking-wide text-ink-soft">
             <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">Step</th>
-              <th className="px-3 py-2">Description</th>
-              <th className="px-3 py-2">Expected outcome</th>
-              <th className="px-3 py-2">Result</th>
-              <th className="px-3 py-2" />
+              <th scope="col" className="px-3 py-2">#</th>
+              <th scope="col" className="px-3 py-2">Step</th>
+              <th scope="col" className="px-3 py-2">Description</th>
+              <th scope="col" className="px-3 py-2">Expected outcome</th>
+              <th scope="col" className="px-3 py-2">Result</th>
+              <th scope="col" className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -91,6 +91,7 @@ export function TestPackageView({
                       value={step.result ?? ''}
                       disabled={pendingId === step.id}
                       onChange={(e) => handleResultChange(step.id, (e.target.value || null) as TestResult | null)}
+                      aria-label={`Result for ${step.stepName}`}
                       className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                     >
                       <option value="">Not tested</option>
