@@ -27,8 +27,16 @@ B: the Testing Lab execution tab, both already merged).
    "Issue Insights" (today's dashboard, unchanged content) and "Testing
    Insights" (new; only rendered as an option when `engagement.
    test_cases_enabled` is true — for an engagement without test cases,
-   `?view=testing` redirects back to `?view=issues`, mirroring how Testing
-   Lab redirects to `/board` when visited with the flag off).
+   `?view=testing` falls back to rendering Issue Insights instead: the view
+   computation treats any `?view=testing` request as `issues` when the flag
+   is off, leaving the query param in the URL rather than issuing a real
+   redirect. This differs from Testing Lab's own page, which does redirect
+   to `/board` when visited with the flag off — but Testing Lab has nothing
+   else to render when disabled, whereas the dashboard's default view is
+   always valid content, so there's nowhere it needs to navigate away to. A
+   real redirect would also need to worry about preserving other query
+   params, like `?phase=`, across the redirect, which the fallback avoids
+   for free).
 2. **No new tables or migration.** One new Server Action,
    `listTestPackagesWithResults`, reads the same `test_packages`/
    `test_package_steps` schema Sub-project A created — just a lighter
@@ -149,9 +157,16 @@ export function perPackageResultBreakdown(
 which caps its day range at today because it has no "target" concept to draw
 past today). `cumulativeTested` is `null` for any day after `now`, so the
 chart's actual-progress line stops at today; `targetCumulative` spans the
-whole period linearly from `0` to `steps.length`. A misconfigured period
-(`endDate <= startDate`) returns `targetCumulative` as the full total for
-every point rather than dividing by a non-positive duration.
+whole period linearly from `0` to `steps.length`, measuring elapsed time to
+the *end* of each day rather than its start — so on day one the target line
+already sits at a small positive value (one day's worth of expected
+progress), not exactly zero, for a period long enough to show the
+difference at the rounding precision used; this is deliberate, since day
+one already represents a full day of expected progress, not a bug. A
+misconfigured period (`endDate <= startDate`) returns an empty array: the
+day-walk `while` loop that builds the list of days never executes when
+`startDate` is after `endDate`, so the per-day callback that computes
+`targetCumulative` never runs at all.
 
 ## New components
 
