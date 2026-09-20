@@ -25,6 +25,8 @@ const ICONS: Record<NavSectionKey, Icon> = {
 
 const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
 
+type SubItem = { id: string; label: string; href: string };
+
 export function Sidebar({
   engagementId,
   isProm,
@@ -38,21 +40,46 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   // Subscribes to every search-param change app-wide (React context has no
-  // per-key selector), even though only the testing-lab route below ever
-  // reads a key from it. A narrower subscription would require splitting the
-  // package sub-nav out into its own client component — not done here.
+  // per-key selector), even though only the dashboard/testing-lab routes
+  // below ever read a key from it. A narrower subscription would require
+  // splitting the sub-nav out into its own client component — not done here.
   const searchParams = useSearchParams();
   const active = activeNavSection(pathname, engagementId);
   const sections = NAV_SECTIONS.filter(
     (s) => (s.key !== 'settings' || isProm) && (s.key !== 'testing-lab' || testCasesEnabled),
   );
 
-  // On the Testing Lab route itself, default the highlight to the first
-  // package when no `?package=` is present — mirrors the page's own
-  // fallback so the sidebar never shows nothing selected while a package
-  // is in fact being shown.
-  const activePackageId =
-    active === 'testing-lab' ? (searchParams.get('package') ?? testPackages[0]?.id ?? null) : null;
+  // Dashboard only splits into two views once test case tracking is on —
+  // with only one view there's nothing to switch between, so no sub-items.
+  const dashboardSubItems: SubItem[] = testCasesEnabled
+    ? [
+        { id: 'issues', label: 'Issue Insights', href: `/${engagementId}/dashboard` },
+        { id: 'testing', label: 'Testing Insights', href: `/${engagementId}/dashboard?view=testing` },
+      ]
+    : [];
+  const testingLabSubItems: SubItem[] = testPackages.map((pkg) => ({
+    id: pkg.id,
+    label: pkg.name,
+    href: `/${engagementId}/testing-lab?package=${pkg.id}`,
+  }));
+  const subItemsBySection: Partial<Record<NavSectionKey, SubItem[]>> = {
+    dashboard: dashboardSubItems,
+    'testing-lab': testingLabSubItems,
+  };
+
+  // Which sub-item (if any) reads as selected — mirrors each page's own
+  // default-resolution logic so the sidebar never shows nothing selected
+  // while a view/package is in fact being shown.
+  const activeSubItemId: Partial<Record<NavSectionKey, string | null>> = {
+    dashboard:
+      active === 'dashboard'
+        ? searchParams.get('view') === 'testing' && testCasesEnabled
+          ? 'testing'
+          : 'issues'
+        : null,
+    'testing-lab':
+      active === 'testing-lab' ? (searchParams.get('package') ?? testPackages[0]?.id ?? null) : null,
+  };
 
   // Collapse only applies at desktop widths (see the `md:` classes below) —
   // on narrow viewports the sidebar always shows full labels, since the
@@ -66,12 +93,12 @@ export function Sidebar({
   // flash on load — an accepted tradeoff of this SSR-safe pattern.
   const [collapsed, setCollapsed] = useState(false);
 
-  // Whether the Testing Lab package sub-list is expanded. `null` means the
-  // user hasn't manually toggled it yet, so it falls back to auto-expanding
-  // when the user is actually on a /testing-lab route. Once they click the
-  // chevron, their explicit choice sticks instead of being forced back open
-  // or closed on every re-render.
-  const [manualExpanded, setManualExpanded] = useState<boolean | null>(null);
+  // Whether each section's sub-list is expanded, keyed by section. Absent
+  // means the user hasn't manually toggled that section yet, so it falls
+  // back to auto-expanding when the user is actually on that section's
+  // route. Once they click a chevron, their explicit choice sticks instead
+  // of being forced back open or closed on every re-render.
+  const [manualExpanded, setManualExpanded] = useState<Partial<Record<NavSectionKey, boolean>>>({});
 
   useEffect(() => {
     try {
@@ -109,13 +136,15 @@ export function Sidebar({
       {sections.map((section) => {
         const isActive = section.key === active;
         const SectionIcon = ICONS[section.key];
-        // Testing Lab's own row must never share the "selected" highlight
-        // with one of its package sub-items — showing both at once reads as
-        // two things being selected. When it has packages, a sub-item is
-        // always what should read as selected instead.
-        const hasPackages = section.key === 'testing-lab' && testPackages.length > 0;
-        const parentHighlighted = isActive && !hasPackages;
-        const packagesExpanded = hasPackages && (manualExpanded ?? active === 'testing-lab');
+        const subItems = subItemsBySection[section.key] ?? [];
+        // A section with sub-items must never share the "selected" highlight
+        // between its own row and one of its sub-items — showing both at
+        // once reads as two things being selected. When it has sub-items, a
+        // sub-item is always what should read as selected instead.
+        const hasSubItems = subItems.length > 0;
+        const parentHighlighted = isActive && !hasSubItems;
+        const isExpanded = hasSubItems && (manualExpanded[section.key] ?? active === section.key);
+        const currentSubItemId = activeSubItemId[section.key] ?? null;
         return (
           <div key={section.key}>
             <div className="flex items-stretch">
@@ -135,36 +164,36 @@ export function Sidebar({
                 <SectionIcon className="h-4 w-4 shrink-0" stroke={1.5} />
                 <span className={collapsed ? 'md:hidden' : ''}>{section.label}</span>
               </Link>
-              {hasPackages && !collapsed && (
+              {hasSubItems && !collapsed && (
                 <button
                   type="button"
-                  onClick={() => setManualExpanded(!packagesExpanded)}
-                  aria-label={packagesExpanded ? 'Collapse test packages' : 'Expand test packages'}
-                  aria-expanded={packagesExpanded}
+                  onClick={() => setManualExpanded((prev) => ({ ...prev, [section.key]: !isExpanded }))}
+                  aria-label={isExpanded ? `Collapse ${section.label}` : `Expand ${section.label}`}
+                  aria-expanded={isExpanded}
                   className="flex items-center px-3 text-primary-soft/70 hover:text-white"
                 >
                   <IconChevronRight
-                    className={`h-4 w-4 shrink-0 transition-transform ${packagesExpanded ? 'rotate-90' : ''}`}
+                    className={`h-4 w-4 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                     stroke={1.5}
                   />
                 </button>
               )}
             </div>
-            {hasPackages && packagesExpanded && !collapsed && (
+            {hasSubItems && isExpanded && !collapsed && (
               <div>
-                {testPackages.map((pkg) => (
+                {subItems.map((item) => (
                   <Link
-                    key={pkg.id}
-                    href={`/${engagementId}/testing-lab?package=${pkg.id}`}
-                    aria-current={pkg.id === activePackageId ? 'page' : undefined}
-                    title={pkg.name}
+                    key={item.id}
+                    href={item.href}
+                    aria-current={item.id === currentSubItemId ? 'page' : undefined}
+                    title={item.label}
                     className={`block truncate border-l-4 py-2 pl-12 pr-4 text-sm font-medium ${
-                      pkg.id === activePackageId
+                      item.id === currentSubItemId
                         ? 'border-brand-green bg-primary-active text-white'
                         : 'border-transparent text-primary-soft/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    {pkg.name}
+                    {item.label}
                   </Link>
                 ))}
               </div>

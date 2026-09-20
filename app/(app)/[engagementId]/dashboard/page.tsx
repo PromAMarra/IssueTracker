@@ -95,6 +95,15 @@ export default async function DashboardPage({
     `rounded-md px-3 py-1.5 text-sm font-medium ${
       phase === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
     }`;
+  // Same phase filter as Issue Insights, but every link has to keep
+  // `view=testing` — reusing phaseLink/phaseClass as-is would drop back to
+  // the Issue Insights view on click.
+  const testingPhaseLink = (value: 'sit' | 'uat' | null) =>
+    value ? `?view=testing&phase=${value}` : '?view=testing';
+  const testingPhaseClass = (value: 'sit' | 'uat' | null) =>
+    `rounded-md px-3 py-1.5 text-sm font-medium ${
+      phase === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
+    }`;
 
   const testPackages = view === 'testing' ? await listTestPackagesWithResults(params.engagementId) : [];
   const testPackageFilter =
@@ -111,25 +120,8 @@ export default async function DashboardPage({
   const testUatTrend = uatPeriod ? testedTrend(allTestSteps, uatPeriod.start, uatPeriod.end, now) : null;
   const packageBreakdown = perPackageResultBreakdown(testPackages);
 
-  const viewLink = (value: 'issues' | 'testing') => (value === 'issues' ? '?' : '?view=testing');
-  const viewClass = (value: 'issues' | 'testing') =>
-    `rounded-md px-3 py-1.5 text-sm font-medium ${
-      view === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
-    }`;
-
   return (
     <div className="flex flex-col gap-6">
-      {engagement.test_cases_enabled && (
-        <div className="flex gap-1 border-b border-hairline pb-3">
-          <Link href={viewLink('issues')} className={viewClass('issues')}>
-            Issue Insights
-          </Link>
-          <Link href={viewLink('testing')} className={viewClass('testing')}>
-            Testing Insights
-          </Link>
-        </div>
-      )}
-
       {view === 'issues' && (
         <>
           <div className={`flex items-center gap-2 ${engagement.sit_expected ? 'justify-between' : 'justify-end'}`}>
@@ -199,6 +191,19 @@ export default async function DashboardPage({
             </p>
           ) : (
             <>
+              {engagement.sit_expected && (
+                <div className="flex gap-1">
+                  <Link href={testingPhaseLink(null)} className={testingPhaseClass(null)}>
+                    All
+                  </Link>
+                  <Link href={testingPhaseLink('sit')} className={testingPhaseClass('sit')}>
+                    SIT
+                  </Link>
+                  <Link href={testingPhaseLink('uat')} className={testingPhaseClass('uat')}>
+                    UAT
+                  </Link>
+                </div>
+              )}
               <TestPackageFilter
                 packages={testPackages.map((p) => ({ id: p.id, name: p.name }))}
                 activeId={testPackageFilter}
@@ -218,8 +223,12 @@ export default async function DashboardPage({
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {testSitTrend && sitPeriod && <TestedTrendChart label="SIT" period={sitPeriod} points={testSitTrend} />}
-                  {testUatTrend && uatPeriod && <TestedTrendChart label="UAT" period={uatPeriod} points={testUatTrend} />}
+                  {(phase === null || phase === 'sit') && testSitTrend && sitPeriod && (
+                    <TestedTrendChart label="SIT" period={sitPeriod} points={testSitTrend} />
+                  )}
+                  {(phase === null || phase === 'uat') && testUatTrend && uatPeriod && (
+                    <TestedTrendChart label="UAT" period={uatPeriod} points={testUatTrend} />
+                  )}
                 </div>
               )}
               <PackageResultsChart data={packageBreakdown} />
