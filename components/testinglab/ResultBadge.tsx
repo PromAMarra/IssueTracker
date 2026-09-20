@@ -9,7 +9,7 @@ const STYLES: Record<'untested' | TestResult, string> = {
 };
 
 export function ResultBadge({ result }: { result: TestResult | null }) {
-  const label = result ? TEST_RESULT_LABELS[result] : 'Not tested';
+  const label = result ? TEST_RESULT_LABELS[result] : 'Not Tested';
   const styleKey = result ?? 'untested';
   return (
     <span

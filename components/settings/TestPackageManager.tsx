@@ -65,7 +65,7 @@ export function TestPackageManager({
 
   return (
     <div className="max-w-xl">
-      <h2 className="mb-2 text-sm font-bold text-ink">Test packages</h2>
+      <h2 className="mb-2 text-sm font-bold text-ink">Test Packages</h2>
       <ul className="mb-3 flex flex-col gap-1">
         {packages.map((p) => (
           <li key={p.id} className="flex items-center justify-between text-sm text-ink-soft">
@@ -89,7 +89,7 @@ export function TestPackageManager({
         <input
           type="text"
           required
-          placeholder="Package name"
+          placeholder="Package Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="rounded-md border border-ink-soft/30 px-3 py-2 text-sm"

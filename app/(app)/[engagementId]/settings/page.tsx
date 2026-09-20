@@ -49,11 +49,11 @@ export default async function SettingsPage({ params }: { params: { engagementId:
         />
       </section>
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink">Bank logo</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink">Bank Logo</h2>
         <BankLogoUploader engagementId={params.engagementId} currentUrl={engagement.bank_logo_url} />
       </section>
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-ink">Prometeia logo</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink">Prometeia Logo</h2>
         <PrometeiaLogoUploader currentUrl={platformSettings.prometeiaLogoUrl} />
       </section>
       <section>

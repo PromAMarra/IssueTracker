@@ -40,7 +40,7 @@ export type TestResult = 'passed' | 'passed_with_minor' | 'failed' | 'na';
 export const TEST_RESULTS: TestResult[] = ['passed', 'passed_with_minor', 'failed', 'na'];
 export const TEST_RESULT_LABELS: Record<TestResult, string> = {
   passed: 'Passed',
-  passed_with_minor: 'Passed with minor',
+  passed_with_minor: 'Passed With Minor',
   failed: 'Failed',
   na: 'N/A',
 };

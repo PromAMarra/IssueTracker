@@ -61,7 +61,7 @@ describe('issueUrl', () => {
 
 describe('statusEmailLabel', () => {
   it('humanises the raw status enum', () => {
-    expect(statusEmailLabel('ready_for_test', false)).toBe('Ready for Test');
+    expect(statusEmailLabel('ready_for_test', false)).toBe('Ready For Test');
     expect(statusEmailLabel('closed', false)).toBe('Closed');
   });
 
@@ -96,9 +96,9 @@ describe('email content', () => {
   });
 
   it('states the new status label', () => {
-    const { subject, body } = statusChangedEmail(ctx, 'Ready for Test');
-    expect(subject).toBe('[ESUP] ESUP-12 status changed to Ready for Test');
-    expect(body).toContain('is now "Ready for Test"');
+    const { subject, body } = statusChangedEmail(ctx, 'Ready For Test');
+    expect(subject).toBe('[ESUP] ESUP-12 status changed to Ready For Test');
+    expect(body).toContain('is now "Ready For Test"');
   });
 });
 

@@ -32,7 +32,7 @@ export function PrometeiaLogoUploader({ currentUrl }: { currentUrl: string | nul
         <img src={preview} alt="Prometeia logo" className="h-12 max-w-[200px] object-contain" />
       )}
       <label className="cursor-pointer rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink hover:bg-primary-soft">
-        {uploading ? 'Uploading…' : 'Upload Prometeia logo'}
+        {uploading ? 'Uploading…' : 'Upload Prometeia Logo'}
         <input type="file" accept="image/*" onChange={handleChange} className="hidden" disabled={uploading} />
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}

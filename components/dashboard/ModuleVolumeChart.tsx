@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 export function ModuleVolumeChart({ data }: { data: { module: string; count: number }[] }) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-bold text-ink">Issues by module</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">Issues By Module</h3>
       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36)}>
         <BarChart data={data} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" horizontal={false} />

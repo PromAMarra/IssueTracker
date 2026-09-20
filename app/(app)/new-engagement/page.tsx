@@ -15,7 +15,7 @@ export default async function NewEngagementPage() {
     <div className="min-h-screen bg-surface">
       <MinimalHeader prometeiaLogoUrl={platformSettings.prometeiaLogoUrl} />
       <main className="mx-auto max-w-2xl px-6 py-10">
-        <h1 className="mb-6 text-xl font-semibold text-ink">New engagement</h1>
+        <h1 className="mb-6 text-xl font-semibold text-ink">New Engagement</h1>
         <NewEngagementForm />
       </main>
     </div>

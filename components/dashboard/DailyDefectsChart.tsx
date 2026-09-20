@@ -44,7 +44,7 @@ export function DailyDefectsChart({
   if (!sitPeriod && !uatPeriod) {
     return (
       <div className="rounded-lg border border-hairline bg-white p-4">
-        <h3 className="mb-1 text-sm font-bold text-ink">Daily defects</h3>
+        <h3 className="mb-1 text-sm font-bold text-ink">Daily Defects</h3>
         <p className="text-sm text-ink-soft">
           Configure SIT and/or UAT testing period dates in Settings to see this report.
         </p>
@@ -55,7 +55,7 @@ export function DailyDefectsChart({
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
       <h3 className="mb-3 text-sm font-bold text-ink">
-        Daily defects{period ? ` (${formatDate(period.start)}–${formatDate(period.end)})` : ''}
+        Daily Defects{period ? ` (${formatDate(period.start)}–${formatDate(period.end)})` : ''}
       </h3>
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>

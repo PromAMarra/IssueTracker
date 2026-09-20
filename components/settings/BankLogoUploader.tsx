@@ -38,7 +38,7 @@ export function BankLogoUploader({
         <img src={preview} alt="Bank logo" className="h-12 max-w-[160px] object-contain" />
       )}
       <label className="cursor-pointer rounded border border-ink-soft/30 px-3 py-2 text-sm text-ink hover:bg-primary-soft">
-        {uploading ? 'Uploading…' : 'Upload bank logo'}
+        {uploading ? 'Uploading…' : 'Upload Bank Logo'}
         <input type="file" accept="image/*" onChange={handleChange} className="hidden" disabled={uploading} />
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}

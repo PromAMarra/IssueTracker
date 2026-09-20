@@ -14,7 +14,7 @@ const COLORS: Record<Status, string> = {
 const LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready for Test',
+  ready_for_test: 'Ready For Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };
@@ -28,7 +28,7 @@ export function StatusDistributionChart({ distribution }: { distribution: Record
 
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-bold text-ink">Issues by status</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">Issues By Status</h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />

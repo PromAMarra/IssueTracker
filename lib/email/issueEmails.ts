@@ -21,7 +21,7 @@ export type NotificationEmailContent = {
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready for Test',
+  ready_for_test: 'Ready For Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };

@@ -32,7 +32,7 @@ export function ExportDashboardButton({
   async function handleExport() {
     const safeName = engagementName.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'engagement';
     const dailyRows = (rows: DailyDefectBucket[]) =>
-      rows.map((r) => ({ Date: r.date, 'Defects new': r.opened, 'Defects closed': r.closed, 'Current live defects': r.liveDefects }));
+      rows.map((r) => ({ Date: r.date, 'Defects New': r.opened, 'Defects Closed': r.closed, 'Current Live Defects': r.liveDefects }));
 
     await downloadWorkbook(
       [
@@ -47,24 +47,24 @@ export function ExportDashboardButton({
           rows: Object.entries(priorityDist).map(([priority, count]) => ({ Priority: priority, Count: count })),
         },
         {
-          name: 'Time to Close',
+          name: 'Time To Close',
           rows: timeToClose.map((r) => ({
             Priority: r.priority,
-            'Closed count': r.count,
-            'Avg days to close': r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : '',
-            'Median days to close': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
-            'SLA target (days)': r.targetDays,
-            'Breach count': r.breachCount,
+            'Closed Count': r.count,
+            'Avg Days To Close': r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : '',
+            'Median Days To Close': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
+            'SLA Target (Days)': r.targetDays,
+            'Breach Count': r.breachCount,
           })),
         },
         {
-          name: 'Time in Status',
+          name: 'Time In Status',
           rows: timeInStatus.map((r) => ({
             Priority: r.priority,
             Status: r.status,
-            'Avg days': r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : '',
-            'Median days': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
-            'Issue count': r.count,
+            'Avg Days': r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : '',
+            'Median Days': r.medianDays !== null ? Number(r.medianDays.toFixed(1)) : '',
+            'Issue Count': r.count,
           })),
         },
         {
@@ -77,8 +77,8 @@ export function ExportDashboardButton({
             Key: r.issue.key,
             Title: r.issue.title,
             Priority: r.issue.priority,
-            'Days open': Number(r.daysOpen.toFixed(1)),
-            'SLA target (days)': r.targetDays,
+            'Days Open': Number(r.daysOpen.toFixed(1)),
+            'SLA Target (Days)': r.targetDays,
             Breached: r.breached ? 'Yes' : 'No',
           })),
         },
@@ -101,7 +101,7 @@ export function ExportDashboardButton({
       onClick={handleExport}
       className="rounded-md border border-ink-soft/30 px-3 py-1.5 text-sm font-medium text-ink hover:bg-primary-soft"
     >
-      Export to Excel
+      Export To Excel
     </button>
   );
 }
