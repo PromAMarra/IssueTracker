@@ -328,6 +328,66 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
   return { patch: toIssueFieldsPatch(updated), newHistory };
 }
 
+// The one status change a Bank/SIT (non-Prometeia) member is allowed to make
+// (see requireProm() above, which gates every other mutation in this file):
+// while a ticket is 'rejected', they may send it back to Prometeia rather
+// than leaving a rejection they disagree with stuck. The RLS policy and
+// trigger in 0019_dispute_rejection.sql enforce the same narrowing at the DB
+// layer — this check is defense in depth, not the real gate.
+export async function disputeRejection(issueId: string): Promise<MutationResult> {
+  const session = await getSessionUser();
+  if (!session) throw new Error('Not authenticated');
+  if (session.profile.is_prometeia) throw new Error('Not authorized');
+
+  const supabase = createServerClient();
+  const { data: current, error: fetchError } = await supabase
+    .from('issues')
+    .select('status, engagement_id, reporter_id, assignee_id, key, title')
+    .eq('id', issueId)
+    .single();
+  if (fetchError) throw fetchError;
+  if (current.status !== 'rejected') {
+    throw new Error('This ticket is no longer rejected.');
+  }
+
+  const newStatus: Status = 'ongoing';
+  // Optimistic-concurrency guard — see updateIssueStatus for why.
+  const { data: updated, error } = await supabase
+    .from('issues')
+    .update({ status: newStatus })
+    .eq('id', issueId)
+    .eq('status', 'rejected')
+    .select(ISSUE_PATCH_SELECT)
+    .maybeSingle();
+  if (error) throw error;
+  if (!updated) throw new Error(CONFLICT_MESSAGE);
+
+  const newHistory: HistoryPatchEntry[] = [
+    await recordHistory(supabase, issueId, 'status', 'rejected', newStatus, session.id),
+  ];
+
+  const reporterId = current.reporter_id as string;
+  const label = statusEmailLabel(newStatus, false);
+  // Fire-and-forget: see notifyByEmail's doc comment for why this must not
+  // be awaited.
+  notifyByEmail(async () => {
+    const recipientIds = statusChangedEmailRecipientIds({
+      reporterId,
+      assigneeId: current.assignee_id,
+      actorId: session.id,
+    });
+    const recipients = await recipientEmails(supabase, recipientIds);
+    if (recipients.length === 0) return;
+    const { subject, body } = statusChangedEmail(
+      { issueId, engagementId: current.engagement_id, key: current.key, title: current.title },
+      label,
+    );
+    await Promise.all(recipients.map((to) => sendNotificationEmail({ to, subject, body })));
+  });
+
+  return { patch: toIssueFieldsPatch(updated), newHistory };
+}
+
 export async function updateIssuePriority(issueId: string, newPriority: Priority): Promise<MutationResult> {
   const session = await requireProm();
   const supabase = createServerClient();
