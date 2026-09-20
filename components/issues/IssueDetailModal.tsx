@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { IconClock, IconHistory, IconMessage, IconPaperclip, IconX } from '@tabler/icons-react';
 import {
   addComment,
+  disputeRejection,
   getIssueDetail,
   updateIssueAssignee,
   updateIssueModule,
@@ -204,7 +205,7 @@ export function IssueDetailModal({
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {STATUS_LABELS[s]}
                   </option>
                 ))}
               </select>
@@ -266,6 +267,18 @@ export function IssueDetailModal({
             <PriorityBadge priority={issue.priority} />
             {issue.module && <span className="text-xs text-ink-soft">{issue.module}</span>}
             {assigneeName && <span className="text-xs text-ink-soft">Assigned: {assigneeName}</span>}
+            {issue.status === 'rejected' && (
+              <>
+                <button
+                  onClick={() => handleField(() => disputeRejection(issueId))}
+                  disabled={busy}
+                  className="rounded-md border border-brand-blue px-3 py-1.5 text-xs font-bold text-brand-blue hover:bg-brand-blue hover:text-white disabled:opacity-60"
+                >
+                  Send back to Prometeia
+                </button>
+                <span className="text-xs text-ink-soft">Disagree with this rejection? Send it back to Prometeia.</span>
+              </>
+            )}
           </div>
         )}
 
