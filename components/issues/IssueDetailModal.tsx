@@ -26,7 +26,7 @@ import type { TeamMember } from '@/lib/data/engagements';
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready For Test',
+  ready_for_test: 'Ready for Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };
@@ -36,10 +36,6 @@ const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 function isImageFile(fileName: string): boolean {
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
   return IMAGE_EXTENSIONS.includes(ext);
-}
-
-function capitalize(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
 export function IssueDetailModal({
@@ -182,13 +178,13 @@ export function IssueDetailModal({
           <div className="mb-4 flex flex-col gap-1 rounded border border-ink-soft/10 bg-brand-gray-light p-3 text-sm">
             {issue.test_case_package && (
               <p>
-                <span className="font-medium text-ink">Test Case Package:</span>{' '}
+                <span className="font-medium text-ink">Test case package:</span>{' '}
                 <span className="text-ink-soft">{issue.test_case_package}</span>
               </p>
             )}
             {issue.test_case_step && (
               <p className="whitespace-pre-wrap">
-                <span className="font-medium text-ink">Test Case Step:</span>{' '}
+                <span className="font-medium text-ink">Test case step:</span>{' '}
                 <span className="text-ink-soft">{issue.test_case_step}</span>
               </p>
             )}
@@ -278,7 +274,7 @@ export function IssueDetailModal({
                   disabled={busy}
                   className="rounded-md border border-brand-blue px-3 py-1.5 text-xs font-bold text-brand-blue hover:bg-brand-blue hover:text-white disabled:opacity-60"
                 >
-                  Send Back To Prometeia
+                  Send back to Prometeia
                 </button>
                 <span className="text-xs text-ink-soft">Disagree with this rejection? Send it back to Prometeia.</span>
               </>
@@ -386,7 +382,7 @@ export function IssueDetailModal({
           </form>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Time In Status" icon={IconClock} defaultOpen={false}>
+        <CollapsibleSection title="Time in status" icon={IconClock} defaultOpen={false}>
           <ul className="flex flex-col gap-1 text-sm">
             {STATUSES.filter((s) => s !== 'closed' && s !== 'rejected').map((s) => (
               <li key={s} className="flex justify-between">
@@ -402,7 +398,7 @@ export function IssueDetailModal({
             {history.map((h) => (
               <li key={h.id} className="text-xs text-ink-soft">
                 <span className="font-mono">{new Date(h.changedAt).toLocaleString('en-GB')}</span> — {h.changedByName}{' '}
-                changed <span className="font-medium text-ink">{capitalize(h.field)}</span> to{' '}
+                changed <span className="font-medium text-ink">{h.field}</span> to{' '}
                 <span className="font-medium text-ink">{h.toValue}</span>
               </li>
             ))}

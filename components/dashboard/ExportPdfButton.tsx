@@ -36,7 +36,7 @@ export function ExportPdfButton({
         disabled={loading}
         className="rounded-md border border-ink-soft/30 px-3 py-1.5 text-sm font-medium text-ink hover:bg-primary-soft disabled:opacity-60"
       >
-        {loading ? 'Generating…' : 'Download As PDF'}
+        {loading ? 'Generating…' : 'Download as PDF'}
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

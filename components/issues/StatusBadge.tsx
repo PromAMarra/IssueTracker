@@ -11,7 +11,7 @@ const STYLES: Record<Status, string> = {
 const LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready For Test',
+  ready_for_test: 'Ready for Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };

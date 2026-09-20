@@ -165,11 +165,11 @@ export default async function DashboardPage({
           </div>
           <div id="dashboard-export-root" className="flex flex-col gap-6">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <StatTile label="Total Issues" value={String(issues.length)} />
+              <StatTile label="Total issues" value={String(issues.length)} />
               <StatTile label="Open" value={String(openCount)} />
               <StatTile label="Closed" value={String(closedCount)} />
               <StatTile
-                label="Reopen Rate"
+                label="Reopen rate"
                 value={`${reopen.ratePercent.toFixed(0)}%`}
                 sublabel={`${reopen.reopenedCount} of ${reopen.everClosedCount} closed`}
               />
@@ -204,14 +204,14 @@ export default async function DashboardPage({
                 activeId={testPackageFilter}
               />
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <StatTile label="Total Tests" value={String(testKpis.total)} />
-                <StatTile label="% Tested" value={`${testKpis.testedPercent}%`} />
-                <StatTile label="% Failed" value={`${testKpis.failedPercent}%`} />
-                <StatTile label="% To Be Tested" value={`${testKpis.toBeTestedPercent}%`} />
+                <StatTile label="Total tests" value={String(testKpis.total)} />
+                <StatTile label="% tested" value={`${testKpis.testedPercent}%`} />
+                <StatTile label="% failed" value={`${testKpis.failedPercent}%`} />
+                <StatTile label="% to be tested" value={`${testKpis.toBeTestedPercent}%`} />
               </div>
               {!testSitTrend && !testUatTrend ? (
                 <div className="rounded-lg border border-hairline bg-white p-4">
-                  <h3 className="mb-1 text-sm font-bold text-ink">Tested Vs. Target Pace</h3>
+                  <h3 className="mb-1 text-sm font-bold text-ink">Tested vs. target pace</h3>
                   <p className="text-sm text-ink-soft">
                     Configure SIT and/or UAT testing period dates in Settings to see this chart.
                   </p>

@@ -42,7 +42,7 @@ export default function SignupPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-surface px-4">
         <div className="w-full max-w-sm rounded-lg border border-hairline bg-white p-8 text-center">
-          <h1 className="mb-2 text-xl font-semibold text-ink">Check Your Email</h1>
+          <h1 className="mb-2 text-xl font-semibold text-ink">Check your email</h1>
           <p className="text-sm text-ink-soft">
             Confirm your address, then{' '}
             <Link href="/login" className="text-brand-blue hover:underline">
@@ -59,11 +59,11 @@ export default function SignupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm rounded-lg border border-hairline bg-white p-8">
-        <h1 className="mb-1 text-xl font-semibold text-ink">Create An Account</h1>
+        <h1 className="mb-1 text-xl font-semibold text-ink">Create an account</h1>
         <p className="mb-6 text-sm text-ink-soft">Prometeia Issue Tracker</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 text-sm text-ink">
-            <label htmlFor="signup-name">Full Name</label>
+            <label htmlFor="signup-name">Full name</label>
             <input
               id="signup-name"
               required
@@ -101,13 +101,13 @@ export default function SignupPage() {
             disabled={loading}
             className="rounded-md bg-brand-blue px-4 py-2 font-bold text-white hover:bg-primary-active disabled:opacity-60"
           >
-            {loading ? 'Creating account…' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
         <p className="mt-4 text-sm text-ink-soft">
           Already have an account?{' '}
           <Link href="/login" className="text-brand-blue hover:underline">
-            Sign In
+            Sign in
           </Link>
         </p>
       </div>

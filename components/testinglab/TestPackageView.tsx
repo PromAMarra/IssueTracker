@@ -78,10 +78,10 @@ export function TestPackageView({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Total Tests" value={String(kpis.total)} />
-        <StatTile label="% Tested" value={`${kpis.testedPercent}%`} />
-        <StatTile label="% Failed" value={`${kpis.failedPercent}%`} />
-        <StatTile label="% To Be Tested" value={`${kpis.toBeTestedPercent}%`} />
+        <StatTile label="Total tests" value={String(kpis.total)} />
+        <StatTile label="% tested" value={`${kpis.testedPercent}%`} />
+        <StatTile label="% failed" value={`${kpis.failedPercent}%`} />
+        <StatTile label="% to be tested" value={`${kpis.toBeTestedPercent}%`} />
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -93,7 +93,7 @@ export function TestPackageView({
               <th scope="col" className="px-3 py-2">#</th>
               <th scope="col" className="px-3 py-2">Step</th>
               <th scope="col" className="px-3 py-2">Description</th>
-              <th scope="col" className="px-3 py-2">Expected Outcome</th>
+              <th scope="col" className="px-3 py-2">Expected outcome</th>
               <th scope="col" className="px-3 py-2">Result</th>
               <th scope="col" className="px-3 py-2">
                 <span className="sr-only">Actions</span>
@@ -118,7 +118,7 @@ export function TestPackageView({
                       aria-label={`Result for ${step.stepName}`}
                       className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                     >
-                      <option value="">Not Tested</option>
+                      <option value="">Not tested</option>
                       {TEST_RESULTS.map((r) => (
                         <option key={r} value={r}>
                           {TEST_RESULT_LABELS[r]}
@@ -135,7 +135,7 @@ export function TestPackageView({
                       className="flex items-center gap-1 whitespace-nowrap rounded-md bg-brand-blue px-2 py-1 text-xs font-bold text-white hover:bg-primary-active"
                     >
                       <IconPlus className="h-3.5 w-3.5" stroke={1.5} />
-                      Open Ticket
+                      Open ticket
                     </button>
                   )}
                 </td>
@@ -155,7 +155,7 @@ export function TestPackageView({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
-              <h2 className="text-lg font-bold text-ink">New Ticket</h2>
+              <h2 className="text-lg font-bold text-ink">New ticket</h2>
               <button
                 type="button"
                 onClick={() => setTicketStepName(null)}

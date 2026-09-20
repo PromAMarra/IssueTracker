@@ -4,7 +4,7 @@ import { PRIORITIES, STATUSES } from '@/lib/types';
 const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready For Test',
+  ready_for_test: 'Ready for Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };
@@ -14,7 +14,7 @@ export function TimeInStatusTable({ rows }: { rows: TimeInStatusRow[] }) {
 
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-1 text-sm font-bold text-ink">Average Time In Status, By Priority</h3>
+      <h3 className="mb-1 text-sm font-bold text-ink">Average time in status, by priority</h3>
       <p className="mb-3 text-xs text-ink-soft">
         Days spent in each status, summed across every visit if a ticket was reopened. Only tickets that actually
         passed through a status count toward its average.

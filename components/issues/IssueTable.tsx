@@ -35,7 +35,7 @@ type SortKey =
 const STATUS_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready For Test',
+  ready_for_test: 'Ready for Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };
@@ -50,9 +50,9 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'module', label: 'Module' },
   { key: 'assigneeName', label: 'Assignee' },
   { key: 'reporterName', label: 'Reporter' },
-  { key: 'org', label: 'Raised By' },
+  { key: 'org', label: 'Raised by' },
   { key: 'created_at', label: 'Opened' },
-  { key: 'updated_at', label: 'Last Updated' },
+  { key: 'updated_at', label: 'Last updated' },
   { key: 'closed_at', label: 'Closed' },
 ];
 
@@ -183,7 +183,7 @@ export function IssueTable({
           rows: rows.map((issue) => {
             const durations = durationsById.get(issue.id);
             const durationCols = Object.fromEntries(
-              STATUSES.map((s) => [`Time In ${STATUS_LABELS[s]} (d)`, durations ? Number(durations[s].toFixed(1)) : 0]),
+              STATUSES.map((s) => [`Time in ${STATUS_LABELS[s]} (d)`, durations ? Number(durations[s].toFixed(1)) : 0]),
             );
             return {
               Key: issue.key,
@@ -193,12 +193,12 @@ export function IssueTable({
               Module: issue.module ?? 'Unassigned',
               Assignee: issue.assigneeName ?? '',
               Reporter: issue.reporterName,
-              'Raised By': ORG_LABELS[issue.org],
+              'Raised by': ORG_LABELS[issue.org],
               Opened: new Date(issue.created_at).toLocaleDateString(),
-              'Last Updated': new Date(issue.updated_at).toLocaleDateString(),
+              'Last updated': new Date(issue.updated_at).toLocaleDateString(),
               Closed: issue.closed_at ? new Date(issue.closed_at).toLocaleDateString() : '',
               ...durationCols,
-              'Reopened From RFT': reopenCountById.get(issue.id) ?? 0,
+              'Reopened from RFT': reopenCountById.get(issue.id) ?? 0,
             };
           }),
         },
@@ -283,11 +283,11 @@ export function IssueTable({
               ))}
               {STATUSES.map((s) => (
                 <th key={s} className="whitespace-nowrap px-3 py-2">
-                  Time In {STATUS_LABELS[s]}
+                  Time in {STATUS_LABELS[s]}
                 </th>
               ))}
-              <th className="whitespace-nowrap px-3 py-2" title="Times sent back to Ongoing/Backlog after Prometeia marked it Ready For Test">
-                Reopened From RFT
+              <th className="whitespace-nowrap px-3 py-2" title="Times sent back to Ongoing/Backlog after Prometeia marked it Ready for Test">
+                Reopened from RFT
               </th>
             </tr>
           </thead>

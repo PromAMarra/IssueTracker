@@ -166,8 +166,8 @@ export function NotificationBell() {
                   type="button"
                   onClick={handleMarkAllRead}
                   disabled={unreadCount === 0}
-                  aria-label="Mark All As Read"
-                  title="Mark All As Read"
+                  aria-label="Mark all as read"
+                  title="Mark all as read"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
                   <IconMail className="h-4 w-4" stroke={1.5} />
@@ -176,8 +176,8 @@ export function NotificationBell() {
                   type="button"
                   onClick={handleDeleteSelected}
                   disabled={selected.size === 0}
-                  aria-label="Delete Selected"
-                  title="Delete Selected"
+                  aria-label="Delete selected"
+                  title="Delete selected"
                   className={TOOLBAR_BUTTON_CLASS}
                 >
                   <IconTrash className="h-4 w-4" stroke={1.5} />
@@ -203,7 +203,7 @@ export function NotificationBell() {
                   onChange={toggleSelectAll}
                   className="h-3.5 w-3.5 rounded border-hairline text-brand-blue focus:ring-brand-blue"
                 />
-                Select All
+                Select all
                 {selected.size > 0 && <span className="text-ink-soft">({selected.size} selected)</span>}
               </label>
             )}

@@ -16,10 +16,10 @@ import type { PackageResultBreakdown } from '@/lib/testPackageDashboard';
 
 const RESULT_SERIES = [
   { key: 'passed', name: 'Passed', color: '#00DC78' },
-  { key: 'passedWithMinor', name: 'Passed With Minor', color: '#FF7D00' },
+  { key: 'passedWithMinor', name: 'Passed with minor', color: '#FF7D00' },
   { key: 'failed', name: 'Failed', color: '#FF0D21' },
   { key: 'na', name: 'N/A', color: '#94A3B8' },
-  { key: 'notTested', name: 'Not Tested', color: '#CBD5E1' },
+  { key: 'notTested', name: 'Not tested', color: '#CBD5E1' },
 ] as const;
 
 const Y_AXIS_WIDTH = 180;
@@ -106,7 +106,7 @@ export function PackageResultsChart({ data }: { data: PackageResultBreakdown[] }
 
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-bold text-ink">Results By Package</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">Results by package</h3>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart
           data={data}

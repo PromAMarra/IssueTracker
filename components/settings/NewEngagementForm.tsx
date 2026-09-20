@@ -24,7 +24,7 @@ export function NewEngagementForm() {
   return (
     <EngagementConfigForm
       initial={EMPTY}
-      submitLabel="Create Engagement"
+      submitLabel="Create engagement"
       onSubmit={async (values) => {
         const id = await createEngagement(values);
         router.push(`/${id}/board`);

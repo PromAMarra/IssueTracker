@@ -92,10 +92,10 @@ export function NewIssueForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-hairline bg-white p-4">
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-        Issue Title
+        Issue title
         <input
           required
-          placeholder="Issue Title"
+          placeholder="Issue title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="rounded-md border border-ink-soft/30 px-3 py-2 text-sm font-normal text-ink"
@@ -134,7 +134,7 @@ export function NewIssueForm({
             onChange={(e) => setModule(e.target.value)}
             className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
-            <option value="">No Module</option>
+            <option value="">No module</option>
             {modules.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -143,13 +143,13 @@ export function NewIssueForm({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-          Test Case Package
+          Test case package
           <select
             value={testCasePackage}
             onChange={(e) => setTestCasePackage(e.target.value)}
             className="rounded-md border border-ink-soft/30 px-2 py-2 text-sm font-normal text-ink"
           >
-            <option value="">No Test Case Package</option>
+            <option value="">No test case package</option>
             {testCasesEnabled
               ? Object.entries(groupedStepOptions).map(([packageName, stepNames]) => (
                   <optgroup key={packageName} label={packageName}>
@@ -168,7 +168,7 @@ export function NewIssueForm({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-          Assign To (Prometeia)
+          Assign to (Prometeia)
           <select
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
@@ -184,9 +184,9 @@ export function NewIssueForm({
         </label>
       </div>
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-        Test Case Step (Optional)
+        Test case step (optional)
         <textarea
-          placeholder="Test Case Step (Optional)"
+          placeholder="Test case step (optional)"
           value={testCaseStep}
           onChange={(e) => setTestCaseStep(e.target.value)}
           rows={2}
@@ -194,7 +194,7 @@ export function NewIssueForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-        Attachments (Optional — Cannot Be Added After The Ticket Is Reported)
+        Attachments (optional — cannot be added after the ticket is reported)
         <input
           ref={fileInputRef}
           type="file"

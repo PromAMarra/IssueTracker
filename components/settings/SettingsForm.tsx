@@ -13,7 +13,7 @@ export function SettingsForm({
   return (
     <EngagementConfigForm
       initial={initial}
-      submitLabel="Save Changes"
+      submitLabel="Save changes"
       onSubmit={(values) => updateEngagementSettings(engagementId, values)}
     />
   );

@@ -31,7 +31,7 @@ export function NewIssueModal({
         className="flex w-fit items-center gap-2 rounded-md bg-brand-blue px-4 py-2 text-sm font-bold text-white hover:bg-primary-active"
       >
         <IconPlus className="h-4 w-4" stroke={1.5} />
-        Open A Ticket
+        Open a ticket
       </button>
       {open && (
         <div
@@ -43,7 +43,7 @@ export function NewIssueModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
-              <h2 className="text-lg font-bold text-ink">New Ticket</h2>
+              <h2 className="text-lg font-bold text-ink">New ticket</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

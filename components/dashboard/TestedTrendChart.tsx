@@ -19,7 +19,7 @@ export function TestedTrendChart({
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
       <h3 className="mb-3 text-sm font-bold text-ink">
-        Tested Vs. Target Pace — {label} ({formatDate(period.start)}–{formatDate(period.end)})
+        Tested vs. target pace — {label} ({formatDate(period.start)}–{formatDate(period.end)})
       </h3>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>

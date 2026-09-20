@@ -5,17 +5,17 @@ import { addMemberByEmail, type Member, type MemberRole } from '@/app/actions/en
 
 const COPY: Record<MemberRole, { title: string; empty: string; placeholder: string }> = {
   bank: {
-    title: 'Bank Members (UAT)',
+    title: 'Bank members (UAT)',
     empty: 'No bank members yet.',
     placeholder: 'person@bank.com',
   },
   sit: {
-    title: 'SIT Members',
+    title: 'SIT members',
     empty: 'No SIT members yet — tickets they report will be tagged as SIT, not UAT.',
     placeholder: 'person@example.com',
   },
   prometeia: {
-    title: 'Prometeia Team',
+    title: 'Prometeia team',
     empty: 'No Prometeia team members yet — add anyone who should be assignable to tickets.',
     placeholder: 'person@prometeia.com',
   },

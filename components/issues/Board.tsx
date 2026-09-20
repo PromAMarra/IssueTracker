@@ -14,7 +14,7 @@ import type { TeamMember } from '@/lib/data/engagements';
 const COLUMN_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
-  ready_for_test: 'Ready For Test',
+  ready_for_test: 'Ready for Test',
   closed: 'Closed',
   rejected: 'Rejected',
 };

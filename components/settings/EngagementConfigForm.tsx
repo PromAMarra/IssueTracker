@@ -80,7 +80,7 @@ export function EngagementConfigForm({
   return (
     <form onSubmit={handleSubmit} className="flex max-w-xl flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm text-ink">
-        Engagement Name
+        Engagement name
         <input
           required
           value={name}
@@ -89,7 +89,7 @@ export function EngagementConfigForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
-        Bank Name
+        Bank name
         <input
           required
           value={bankName}
@@ -98,7 +98,7 @@ export function EngagementConfigForm({
         />
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
-        Ticket ID Prefix
+        Ticket ID prefix
         <input
           value={keyPrefix}
           onChange={(e) => setKeyPrefix(e.target.value)}
@@ -110,7 +110,7 @@ export function EngagementConfigForm({
         </span>
       </label>
       <label className="flex flex-col gap-1 text-sm text-ink">
-        Modules (Comma-Separated)
+        Modules (comma-separated)
         <input
           value={modules}
           onChange={(e) => setModules(e.target.value)}
@@ -120,7 +120,7 @@ export function EngagementConfigForm({
       </label>
       {!testCasesEnabled && (
         <label className="flex flex-col gap-1 text-sm text-ink">
-          Test Case Packages (Comma-Separated)
+          Test case packages (comma-separated)
           <input
             value={testCasePackages}
             onChange={(e) => setTestCasePackages(e.target.value)}
@@ -137,7 +137,7 @@ export function EngagementConfigForm({
           className="mt-1"
         />
         <span className="flex flex-col gap-1">
-          This Engagement Has A SIT Phase
+          This engagement has a SIT phase
           <span className="text-xs text-ink-soft">
             Unchecking this removes SIT from settings, the dashboard, and filters for this engagement.
           </span>
@@ -151,15 +151,15 @@ export function EngagementConfigForm({
           className="mt-1"
         />
         <span className="flex flex-col gap-1">
-          Track Test Cases From Uploaded Files
+          Track test cases from uploaded files
           <span className="text-xs text-ink-soft">
-            When on, Prometeia can upload test case files and the "Test Case Package" field on
+            When on, Prometeia can upload test case files and the "Test case package" field on
             tickets is populated from them instead of the list above.
           </span>
         </span>
       </label>
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-ink">Testing Periods</legend>
+        <legend className="text-sm font-medium text-ink">Testing periods</legend>
         <span className="text-xs text-ink-soft">
           Used by the dashboard's daily defects report. Leave blank for a period that doesn't apply.
         </span>
@@ -167,7 +167,7 @@ export function EngagementConfigForm({
           {sitExpected && (
             <>
               <label className="flex flex-col gap-1 text-xs text-ink-soft">
-                SIT Start
+                SIT start
                 <input
                   type="date"
                   value={sitStartDate}
@@ -176,7 +176,7 @@ export function EngagementConfigForm({
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs text-ink-soft">
-                SIT End
+                SIT end
                 <input
                   type="date"
                   value={sitEndDate}
@@ -187,7 +187,7 @@ export function EngagementConfigForm({
             </>
           )}
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            UAT Start
+            UAT start
             <input
               type="date"
               value={uatStartDate}
@@ -196,7 +196,7 @@ export function EngagementConfigForm({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            UAT End
+            UAT end
             <input
               type="date"
               value={uatEndDate}
@@ -207,7 +207,7 @@ export function EngagementConfigForm({
         </div>
       </fieldset>
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-ink">SLA Target (Days To Close)</legend>
+        <legend className="text-sm font-medium text-ink">SLA target (days to close)</legend>
         <div className="grid grid-cols-4 gap-3">
           {PRIORITIES.map((p) => (
             <label key={p} className="flex flex-col gap-1 text-xs capitalize text-ink-soft">

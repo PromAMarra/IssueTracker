@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-sm rounded-lg border border-hairline bg-white p-8">
-        <h1 className="mb-1 text-xl font-semibold text-ink">Sign In</h1>
+        <h1 className="mb-1 text-xl font-semibold text-ink">Sign in</h1>
         <p className="mb-6 text-sm text-ink-soft">Prometeia Issue Tracker</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 text-sm text-ink">
@@ -75,13 +75,13 @@ export default function LoginPage() {
             disabled={loading}
             className="rounded-md bg-brand-blue px-4 py-2 font-bold text-white hover:bg-primary-active disabled:opacity-60"
           >
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
         <p className="mt-4 text-sm text-ink-soft">
           No account?{' '}
           <Link href="/signup" className="text-brand-blue hover:underline">
-            Sign Up
+            Sign up
           </Link>
         </p>
       </div>
