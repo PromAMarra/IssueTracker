@@ -46,12 +46,15 @@ export default async function DashboardPage({
   const session = await getSessionUser();
   if (!session) redirect('/login');
 
-  const [engagement, allIssues, allHistory] = await Promise.all([
-    getEngagement(params.engagementId),
-    listIssues(params.engagementId),
-    listHistoryForEngagement(params.engagementId),
-  ]);
+  const engagement = await getEngagement(params.engagementId);
   if (!engagement) redirect('/');
+
+  const view = searchParams.view === 'testing' && engagement.test_cases_enabled ? 'testing' : 'issues';
+
+  const [allIssues, allHistory]: [Awaited<ReturnType<typeof listIssues>>, Awaited<ReturnType<typeof listHistoryForEngagement>>] =
+    view === 'issues'
+      ? await Promise.all([listIssues(params.engagementId), listHistoryForEngagement(params.engagementId)])
+      : [[], []];
 
   const phase = searchParams.phase === 'sit' || searchParams.phase === 'uat' ? searchParams.phase : null;
   // Prometeia-reported issues aren't owned by either testing phase, so they
@@ -93,7 +96,6 @@ export default async function DashboardPage({
       phase === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
     }`;
 
-  const view = searchParams.view === 'testing' && engagement.test_cases_enabled ? 'testing' : 'issues';
   const testPackages = view === 'testing' ? await listTestPackagesWithResults(params.engagementId) : [];
   const testPackageFilter =
     searchParams.testPackage && testPackages.some((p) => p.id === searchParams.testPackage)
@@ -197,7 +199,10 @@ export default async function DashboardPage({
             </p>
           ) : (
             <>
-              <TestPackageFilter packages={testPackages} activeId={testPackageFilter} />
+              <TestPackageFilter
+                packages={testPackages.map((p) => ({ id: p.id, name: p.name }))}
+                activeId={testPackageFilter}
+              />
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <StatTile label="Total Tests" value={String(testKpis.total)} />
                 <StatTile label="% Tested" value={`${testKpis.testedPercent}%`} />

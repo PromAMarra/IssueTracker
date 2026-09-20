@@ -1,13 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import type { TestPackageWithResults } from '@/app/actions/testPackages';
 
 export function TestPackageFilter({
   packages,
   activeId,
 }: {
-  packages: TestPackageWithResults[];
+  packages: { id: string; name: string }[];
   activeId: string | null;
 }) {
   const router = useRouter();
