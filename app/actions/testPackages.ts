@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
@@ -106,7 +107,7 @@ export async function deleteTestPackage(engagementId: string, packageId: string)
 
 export type TestPackageName = { id: string; name: string };
 
-export async function listTestPackageNames(engagementId: string): Promise<TestPackageName[]> {
+export const listTestPackageNames = cache(async (engagementId: string): Promise<TestPackageName[]> => {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   const supabase = createServerClient();
@@ -117,7 +118,7 @@ export async function listTestPackageNames(engagementId: string): Promise<TestPa
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data as TestPackageName[];
-}
+});
 
 export async function listTestPackages(engagementId: string): Promise<TestPackageSummary[]> {
   const session = await getSessionUser();
@@ -193,22 +194,27 @@ export async function getTestPackageDetail(engagementId: string, packageId: stri
   return { id: row.id, name: row.name, steps };
 }
 
-export async function updateTestStepResult(stepId: string, result: TestResult | null): Promise<void> {
+export async function updateTestStepResult(
+  stepId: string,
+  result: TestResult | null,
+  previousResult: TestResult | null,
+): Promise<void> {
   const session = await requireNonProm();
   const supabase = createServerClient();
-  // .select().maybeSingle() after the update confirms a row was actually
-  // touched — see updateIssueStatus in app/actions/issues.ts for the same
-  // pattern. An unmatched id and an RLS-blocked write (the caller isn't a
-  // member of this step's engagement) both otherwise return success having
-  // updated zero rows.
-  const { data, error } = await supabase
+  // Optimistic-concurrency guard — see updateIssuePriority in app/actions/issues.ts
+  // for the same pattern. Without conditioning on the result the caller last saw,
+  // two testers submitting different results for the same step in a short window
+  // would silently overwrite each other with no error to either side.
+  let query = supabase
     .from('test_package_steps')
     .update({ result, result_updated_by: session.id, result_updated_at: new Date().toISOString() })
-    .eq('id', stepId)
-    .select('id')
-    .maybeSingle();
+    .eq('id', stepId);
+  query = previousResult === null ? query.is('result', null) : query.eq('result', previousResult);
+  const { data, error } = await query.select('id').maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error('This test step could not be updated. It may have been removed, or you may not have access to it.');
+  if (!data) {
+    throw new Error('This result changed since you loaded it. Please refresh and try again.');
+  }
 }
 
 export type TestCaseStepOption = { packageName: string; stepName: string };
