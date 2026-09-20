@@ -31,6 +31,7 @@ export type CreateIssueInput = {
 export async function createIssue(input: CreateIssueInput): Promise<string> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
+  if (session.profile.is_prometeia) throw new Error('Not authorized');
 
   const title = input.title.trim();
   const description = input.description.trim();
