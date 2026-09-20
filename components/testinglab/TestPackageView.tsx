@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { IconPlus, IconX } from '@tabler/icons-react';
 import {
   updateTestStepResult,
@@ -31,22 +32,43 @@ export function TestPackageView({
   testCasesEnabled: boolean;
   testCaseStepOptions: TestCaseStepOption[];
 }) {
+  const router = useRouter();
   const [steps, setSteps] = useState(detail.steps);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticketStepName, setTicketStepName] = useState<string | null>(null);
 
+  // A real navigation/reload gives us a fresh server-fetched array — resync
+  // to it rather than keep patching indefinitely on top of a stale base.
+  useEffect(() => {
+    setSteps(detail.steps);
+  }, [detail.steps]);
+
+  // Quick edits below patch just the one changed step locally instead of
+  // re-fetching the whole package (updateTestStepResult calls no
+  // revalidatePath — see the comment block on updateIssueStatus in
+  // app/actions/issues.ts for why). Refreshing when the tab regains focus
+  // covers the common case — coming back to this view after being away —
+  // without paying the full re-fetch cost on every local edit.
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') router.refresh();
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [router]);
+
   const kpis = testPackageKpis(steps);
 
   async function handleResultChange(stepId: string, result: TestResult | null) {
-    const previous = steps;
+    const previousResult = steps.find((s) => s.id === stepId)?.result ?? null;
     setPendingId(stepId);
     setError(null);
     setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result } : s)));
     try {
       await updateTestStepResult(stepId, result);
     } catch (err) {
-      setSteps(previous);
+      setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result: previousResult } : s)));
       setError(err instanceof Error ? err.message : 'Could not save this result.');
     } finally {
       setPendingId(null);
@@ -73,7 +95,9 @@ export function TestPackageView({
               <th scope="col" className="px-3 py-2">Description</th>
               <th scope="col" className="px-3 py-2">Expected outcome</th>
               <th scope="col" className="px-3 py-2">Result</th>
-              <th scope="col" className="px-3 py-2" />
+              <th scope="col" className="px-3 py-2">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
