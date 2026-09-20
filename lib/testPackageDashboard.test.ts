@@ -35,6 +35,20 @@ describe('testedTrend', () => {
     const trend = testedTrend(steps, '2026-01-05', '2026-01-01', now);
     expect(trend).toHaveLength(0);
   });
+
+  it('counts a pre-filled result with no timestamp (e.g. from an upload with an already-filled Result column) as tested from day one', () => {
+    const steps = [{ result: 'passed' as const, resultUpdatedAt: null }];
+    const trend = testedTrend(steps, '2026-01-01', '2026-01-11', now);
+    expect(trend[0].cumulativeTested).toBe(1);
+    expect(trend[9].cumulativeTested).toBe(1);
+  });
+
+  it('measures elapsed time to end-of-day, so the target line starts above zero on day one for a large enough total to show it', () => {
+    const steps = Array.from({ length: 100 }, () => ({ result: null, resultUpdatedAt: null }));
+    const trend = testedTrend(steps, '2026-01-01', '2026-01-11', now);
+    expect(trend[0].targetCumulative).toBe(9);
+    expect(trend[10].targetCumulative).toBe(100);
+  });
 });
 
 describe('perPackageResultBreakdown', () => {

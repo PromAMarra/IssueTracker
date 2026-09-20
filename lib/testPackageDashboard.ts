@@ -30,7 +30,8 @@ export function testedTrend(
       day <= todayStr
         ? steps.filter(
             (s) =>
-              s.result !== null && s.resultUpdatedAt !== null && new Date(s.resultUpdatedAt).getTime() <= dayEndMs,
+              s.result !== null &&
+              (s.resultUpdatedAt === null || new Date(s.resultUpdatedAt).getTime() <= dayEndMs),
           ).length
         : null;
     const elapsedMs = Math.min(dayEndMs, periodEndMs) - periodStartMs;
