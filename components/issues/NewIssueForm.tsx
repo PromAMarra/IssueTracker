@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createIssue, uploadAttachment } from '@/app/actions/issues';
 import type { Priority } from '@/lib/types';
@@ -50,6 +50,7 @@ export function NewIssueForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const groupedStepOptions = useMemo(() => groupStepOptionsByPackage(testCaseStepOptions), [testCaseStepOptions]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -150,7 +151,7 @@ export function NewIssueForm({
           >
             <option value="">No Test Case Package</option>
             {testCasesEnabled
-              ? Object.entries(groupStepOptionsByPackage(testCaseStepOptions)).map(([packageName, stepNames]) => (
+              ? Object.entries(groupedStepOptions).map(([packageName, stepNames]) => (
                   <optgroup key={packageName} label={packageName}>
                     {stepNames.map((stepName) => (
                       <option key={stepName} value={stepName}>
