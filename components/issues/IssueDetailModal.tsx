@@ -247,7 +247,7 @@ export function IssueDetailModal({
                 value={issue.assignee_id ?? ''}
                 disabled={busy}
                 onChange={(e) => handleField(() => updateIssueAssignee(issueId, e.target.value || null))}
-                className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
+                className="w-48 truncate rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
               >
                 <option value="">Unassigned</option>
                 {teamMembers.map((m) => (

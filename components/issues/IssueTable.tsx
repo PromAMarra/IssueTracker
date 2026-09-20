@@ -363,7 +363,7 @@ export function IssueTable({
                       value={issue.assignee_id ?? ''}
                       disabled={pendingId === issue.id}
                       onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
-                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs"
+                      className="w-40 truncate rounded-md border border-ink-soft/30 px-2 py-1 text-xs"
                     >
                       <option value="">Unassigned</option>
                       {teamMembers.map((m) => (

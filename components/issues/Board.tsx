@@ -144,7 +144,7 @@ export function Board({
                           value={issue.assignee_id ?? ''}
                           disabled={pendingId === issue.id}
                           onChange={(e) => run(issue.id, () => updateIssueAssignee(issue.id, e.target.value || null))}
-                          className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                          className="w-full truncate rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
                         >
                           <option value="">Unassigned</option>
                           {teamMembers.map((m) => (
