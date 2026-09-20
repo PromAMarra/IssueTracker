@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
 import { listIssues } from '@/lib/data/issues';
-import { listTestCaseStepOptions } from '@/app/actions/testPackages';
+import { listTestCaseStepOptions, type TestCaseStepOption } from '@/app/actions/testPackages';
 import { Board } from '@/components/issues/Board';
 import { NewIssueModal } from '@/components/issues/NewIssueModal';
 import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
@@ -21,7 +21,11 @@ export default async function BoardPage({
     getEngagement(params.engagementId),
     listIssues(params.engagementId),
     listPrometeiaTeam(params.engagementId),
-    listTestCaseStepOptions(params.engagementId),
+    // NewIssueModal (the only consumer of this) is never rendered for Prometeia users,
+    // so skip the full-engagement test-package/step join for the board's primary audience.
+    session.profile.is_prometeia
+      ? Promise.resolve<TestCaseStepOption[]>([])
+      : listTestCaseStepOptions(params.engagementId),
   ]);
   if (!engagement) redirect('/');
 
