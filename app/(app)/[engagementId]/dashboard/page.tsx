@@ -120,16 +120,16 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1 border-b border-hairline pb-3">
-        <Link href={viewLink('issues')} className={viewClass('issues')}>
-          Issue Insights
-        </Link>
-        {engagement.test_cases_enabled && (
+      {engagement.test_cases_enabled && (
+        <div className="flex gap-1 border-b border-hairline pb-3">
+          <Link href={viewLink('issues')} className={viewClass('issues')}>
+            Issue Insights
+          </Link>
           <Link href={viewLink('testing')} className={viewClass('testing')}>
             Testing Insights
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       {view === 'issues' && (
         <>
@@ -225,18 +225,8 @@ export default async function DashboardPage({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {testSitTrend && (
-                    <TestedTrendChart
-                      title={`Tested vs. target pace — SIT (${sitPeriod!.start} to ${sitPeriod!.end})`}
-                      points={testSitTrend}
-                    />
-                  )}
-                  {testUatTrend && (
-                    <TestedTrendChart
-                      title={`Tested vs. target pace — UAT (${uatPeriod!.start} to ${uatPeriod!.end})`}
-                      points={testUatTrend}
-                    />
-                  )}
+                  {sitPeriod && testSitTrend && <TestedTrendChart label="SIT" period={sitPeriod} points={testSitTrend} />}
+                  {uatPeriod && testUatTrend && <TestedTrendChart label="UAT" period={uatPeriod} points={testUatTrend} />}
                 </div>
               )}
               <PackageResultsChart data={packageBreakdown} />

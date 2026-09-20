@@ -7,12 +7,22 @@ function formatDate(iso: string): string {
   return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
 }
 
-export function TestedTrendChart({ title, points }: { title: string; points: TestedTrendPoint[] }) {
+export function TestedTrendChart({
+  label,
+  period,
+  points,
+}: {
+  label: string;
+  period: { start: string; end: string };
+  points: TestedTrendPoint[];
+}) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">
-      <h3 className="mb-3 text-sm font-bold text-ink">{title}</h3>
+      <h3 className="mb-3 text-sm font-bold text-ink">
+        Tested vs. target pace — {label} ({formatDate(period.start)}–{formatDate(period.end)})
+      </h3>
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E1E0D9" vertical={false} />
           <XAxis
             dataKey="date"
@@ -20,6 +30,10 @@ export function TestedTrendChart({ title, points }: { title: string; points: Tes
             tick={{ fontSize: 11, fill: '#565F78' }}
             axisLine={{ stroke: '#C3C2B7' }}
             tickLine={false}
+            angle={-45}
+            textAnchor="end"
+            height={50}
+            interval="preserveStartEnd"
           />
           <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#565F78' }} axisLine={false} tickLine={false} />
           <Tooltip labelFormatter={(v) => formatDate(String(v))} />
