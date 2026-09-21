@@ -2,6 +2,19 @@ import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers';
 import { fetchWithRetryNode } from './fetchWithRetryNode';
 
+/**
+ * The Supabase client used by (almost) every Server Component and every
+ * Server Action in app/actions/*.ts. It is built with the anon key plus the
+ * current request's session cookies — NOT a service-role/admin key — so
+ * every query issued through this client is evaluated by Postgres RLS as
+ * the signed-in caller. This is the linchpin of the whole "RLS is the real
+ * authorization boundary" architecture described across app/actions/*.ts:
+ * Server Actions' own JS-level role/permission checks are UX only, and it
+ * is this client's identity that Postgres actually enforces against.
+ *
+ * Uses fetchWithRetryNode (not the plain fetch) to work around this
+ * environment's dead-connection-reuse issue — see that file for details.
+ */
 export function createServerClient() {
   const cookieStore = cookies();
   return createSupabaseServerClient(

@@ -1,5 +1,12 @@
 import { Agent, fetch as undiciFetch } from 'undici';
 
+/**
+ * Node.js-runtime fetch wrapper with retry/backoff plus a short-lived undici
+ * Agent, used as the `global.fetch` override for the Supabase client created
+ * in lib/supabase/server.ts (i.e. every Server Component and Server Action).
+ * See lib/supabase/fetchWithRetry.ts for the Edge-runtime sibling used by
+ * middleware.ts, which cannot load this Node-only module.
+ */
 // Node.js-runtime only (pulls in Node built-ins via undici — do not import
 // this from middleware.ts, which runs in the Edge runtime and can't bundle
 // it). Used by lib/supabase/server.ts for Server Components/Actions.

@@ -1,6 +1,19 @@
 import { cache } from 'react';
 import { createServerClient } from '@/lib/supabase/server';
 
+/**
+ * Resolves "who is making this request" for Server Components and Server
+ * Actions: Supabase Auth's own user record plus the app's `profiles` row
+ * (full name, email, and the Prometeia-vs-external `is_prometeia` flag used
+ * throughout the app to distinguish internal staff from bank/SIT users).
+ *
+ * This is a convenience/UX layer only — it decides what to render and gives
+ * Server Actions an early, friendly rejection. It is NOT the authorization
+ * boundary: every table this session's identity ends up querying is still
+ * governed by Postgres RLS using the caller's own session cookies, so a bug
+ * here can make the UI behave oddly but cannot by itself grant access to
+ * data RLS wouldn't otherwise allow.
+ */
 export type Profile = {
   id: string;
   email: string;
@@ -39,5 +52,9 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
   if (!profile) return null;
 
+  // Prefer Supabase Auth's own email (the source of truth, e.g. after the
+  // user changes it) over the possibly-stale copy on `profiles`; the
+  // profile's email is only a fallback for the unexpected case where Auth
+  // doesn't return one.
   return { id: user.id, email: user.email ?? profile.email, profile };
 });
