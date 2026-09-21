@@ -2,13 +2,17 @@
 -- results for the same step (a package's SIT progress and UAT progress are
 -- genuinely different testing efforts, not one shared answer), replacing
 -- the single result/result_updated_by/result_updated_at columns.
+--
+-- Written defensively (IF NOT EXISTS / IF EXISTS throughout) so this file is
+-- safe to re-run from scratch even if an earlier attempt got partway through
+-- before failing.
 alter table public.test_package_steps
-  add column sit_result text check (sit_result in ('passed', 'passed_with_minor', 'failed', 'na')),
-  add column sit_result_updated_by uuid references public.profiles(id),
-  add column sit_result_updated_at timestamptz,
-  add column uat_result text check (uat_result in ('passed', 'passed_with_minor', 'failed', 'na')),
-  add column uat_result_updated_by uuid references public.profiles(id),
-  add column uat_result_updated_at timestamptz;
+  add column if not exists sit_result text check (sit_result in ('passed', 'passed_with_minor', 'failed', 'na')),
+  add column if not exists sit_result_updated_by uuid references public.profiles(id),
+  add column if not exists sit_result_updated_at timestamptz,
+  add column if not exists uat_result text check (uat_result in ('passed', 'passed_with_minor', 'failed', 'na')),
+  add column if not exists uat_result_updated_by uuid references public.profiles(id),
+  add column if not exists uat_result_updated_at timestamptz;
 
 -- Backfill: route each existing result to whichever phase last touched it
 -- (via engagement_members.phase for whoever set result_updated_by). A
@@ -16,23 +20,34 @@ alter table public.test_package_steps
 -- edited) becomes the UAT baseline, since UAT is this app's always-present
 -- phase — SIT testers, when SIT is enabled, start from an untested step and
 -- record their own independent result.
+--
+-- Computed via a CTE rather than a plain UPDATE ... FROM ... JOIN, because
+-- the join's ON clause needs to reference the row being updated
+-- (tps.result_updated_by) — not allowed directly in an UPDATE's FROM-list
+-- join, but fine once that lookup is a separate, independently-evaluated
+-- query the UPDATE then joins against normally.
+with step_phase as (
+  select s.id as step_id, em.phase
+  from public.test_package_steps s
+  join public.test_packages tp on tp.id = s.test_package_id
+  left join public.engagement_members em
+    on em.engagement_id = tp.engagement_id and em.user_id = s.result_updated_by
+)
 update public.test_package_steps tps
 set
-  sit_result = case when em.phase = 'sit' then tps.result else null end,
-  sit_result_updated_by = case when em.phase = 'sit' then tps.result_updated_by else null end,
-  sit_result_updated_at = case when em.phase = 'sit' then tps.result_updated_at else null end,
-  uat_result = case when em.phase = 'sit' then null else tps.result end,
-  uat_result_updated_by = case when em.phase = 'sit' then null else tps.result_updated_by end,
-  uat_result_updated_at = case when em.phase = 'sit' then null else tps.result_updated_at end
-from public.test_packages tp
-left join public.engagement_members em
-  on em.engagement_id = tp.engagement_id and em.user_id = tps.result_updated_by
-where tp.id = tps.test_package_id;
+  sit_result = case when sp.phase = 'sit' then tps.result else null end,
+  sit_result_updated_by = case when sp.phase = 'sit' then tps.result_updated_by else null end,
+  sit_result_updated_at = case when sp.phase = 'sit' then tps.result_updated_at else null end,
+  uat_result = case when sp.phase = 'sit' then null else tps.result end,
+  uat_result_updated_by = case when sp.phase = 'sit' then null else tps.result_updated_by end,
+  uat_result_updated_at = case when sp.phase = 'sit' then null else tps.result_updated_at end
+from step_phase sp
+where sp.step_id = tps.id;
 
 alter table public.test_package_steps
-  drop column result,
-  drop column result_updated_by,
-  drop column result_updated_at;
+  drop column if exists result,
+  drop column if exists result_updated_by,
+  drop column if exists result_updated_at;
 
 -- Supersedes test_step_result_only() (0018): RLS still gates rows, not
 -- columns, so the existing test_package_steps_update_bank_sit policy (any
@@ -82,8 +97,9 @@ $$ language plpgsql security definer set search_path = public, pg_temp;
 -- other test_packages field, but 0018 never added an UPDATE policy for this
 -- table (only insert/delete were needed until now).
 alter table public.test_packages
-  add column sit_execution_owner_id uuid references public.profiles(id),
-  add column uat_execution_owner_id uuid references public.profiles(id);
+  add column if not exists sit_execution_owner_id uuid references public.profiles(id),
+  add column if not exists uat_execution_owner_id uuid references public.profiles(id);
 
+drop policy if exists "test_packages_update_prometeia" on public.test_packages;
 create policy "test_packages_update_prometeia" on public.test_packages for update
   using (is_prometeia_user());
