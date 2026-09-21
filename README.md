@@ -18,9 +18,9 @@ Every engagement has three kinds of participants, each with different access:
 
 | Role | Who | Can do |
 |---|---|---|
-| **Prometeia** | Prometeia's own team | Full control: create engagements, manage rosters, triage and update any ticket, configure settings |
-| **Bank** | The client bank's UAT testers | Report issues for their own engagement, comment, attach files — cannot change status/priority/module/assignee |
-| **SIT** | A dedicated system-integration test team, where one is engaged | Same reporting rights as Bank, tracked as a separate source so SIT-found vs. bank-found defects can be told apart |
+| **Prometeia** | Prometeia's own team | Full control: create engagements, manage rosters, triage and update any ticket, configure settings — but cannot report new tickets themselves |
+| **Bank** | The client bank's UAT testers | Report issues for their own engagement, comment, attach files, and — once a ticket reaches Ready for Test or Rejected — confirm the fix (Closed), reject it back (Rejected), or dispute a rejection (back to Ongoing); cannot otherwise change status/priority/module/assignee |
+| **SIT** | A dedicated system-integration test team, where one is engaged | Same rights as Bank above, tracked as a separate source so SIT-found vs. bank-found defects can be told apart |
 
 Every engagement is fully isolated: a bank account can only ever see the
 engagement(s) it has been explicitly added to, enforced at the database level
@@ -33,8 +33,13 @@ engagement(s) it has been explicitly added to, enforced at the database level
   attachments (screenshots, logs) — attachments can only be added at creation
   time, keeping the audit trail of "what was actually reported" intact.
 - **Workflow**: `Backlog → Ongoing → Ready for Test → Closed`, with `Rejected`
-  as a terminal state for invalid reports. Only Prometeia can move a ticket
-  through the workflow or reassign it.
+  as a terminal state for invalid reports. Prometeia drives the workflow and
+  reassignment end to end; the reporting Bank/SIT user additionally gets three
+  narrow self-service moves once a ticket reaches them — confirm a fix
+  (`Ready for Test → Closed`), reject it back (`Ready for Test → Rejected`),
+  or dispute a rejection (`Rejected → Ongoing`) — each requiring a comment
+  explaining why before it goes through. See
+  `docs/TECHNICAL_HANDOVER.md` §5.3 for the full rule set.
 - **Closing a ticket automatically hands it back to whoever reported it** —
   so it's immediately clear who needs to verify the fix — and reopening a
   closed ticket is tracked explicitly (a "Reopened from Ready for Test" count
