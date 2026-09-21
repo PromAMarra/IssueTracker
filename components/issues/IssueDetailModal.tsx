@@ -33,11 +33,44 @@ const STATUS_LABELS: Record<Status, string> = {
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
+// Used only to decide comment-attachment rendering (inline <img> preview vs.
+// a plain download link) — a filename-extension check, not a content-type
+// sniff, so a mislabeled file will render with the wrong treatment.
 function isImageFile(fileName: string): boolean {
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
   return IMAGE_EXTENSIONS.includes(ext);
 }
 
+/**
+ * The full issue detail view, opened as a modal over the Board/List (see the
+ * `?issue=<id>` query param pattern used by both — this component is
+ * rendered by the page when that param is present and fetches its own data
+ * via `getIssueDetail`).
+ *
+ * Responsibility: shows/edits a single issue's core fields, attachments,
+ * comments, per-status time-in-status, and full change history. This is
+ * also where the Bank/SIT "turn rule" and limited self-service status
+ * transitions are actually implemented in the UI (Board/IssueTable never
+ * let Bank/SIT touch status directly):
+ *  - `isProm` again gates which set of controls render (full editable
+ *    fields for Prometeia vs. a constrained status-change flow for Bank/
+ *    SIT) — a UX convenience; the real boundary is RLS on `issues` plus the
+ *    `issues_update_bank_sit_transition` DB trigger (see `lib/issueAccess.ts`).
+ *  - Bank/SIT may only move `rejected -> ongoing` (dispute) or
+ *    `ready_for_test -> closed/rejected` (`BANK_SIT_ALLOWED_TRANSITIONS`),
+ *    and must post a comment to do so — the comment IS the mandatory
+ *    justification note, not a separate field. See `handleComment` below
+ *    for how the pending status change rides on the comment submission.
+ *  - `canPostOnIssue`/`turnLockedMessage` (from `lib/issueAccess.ts`)
+ *    implement the "turn rule": while Backlog/Ongoing it's Prometeia's turn
+ *    to comment/attach; while Ready for Test/Closed/Rejected it's Bank/SIT's
+ *    turn. Posting a comment is blocked (input disabled, explanatory
+ *    message shown) when it isn't the current actor's turn.
+ *  - New top-level attachments can only be added at issue-creation time
+ *    (via `NewIssueForm`) — the Attachments section here is read-only
+ *    display. Comments, however, can carry their own attachments added at
+ *    comment time (`commentFiles` below), which is a separate mechanism.
+ */
 export function IssueDetailModal({
   issueId,
   engagementId,
@@ -161,6 +194,10 @@ export function IssueDetailModal({
 
   const { issue, reporterName, assigneeName, comments, history, attachments } = detail;
   const durations = statusDurations(issue, history, new Date());
+  // "Turn rule": whichever side doesn't currently own the ticket (per
+  // issue.status) cannot post — see canPostOnIssue in lib/issueAccess.ts.
+  // This only disables the comment form client-side; posting is enforced
+  // server-side by RLS on comments/attachments regardless of this flag.
   const canPost = canPostOnIssue(issue.status, isProm);
 
   return (
@@ -206,6 +243,15 @@ export function IssueDetailModal({
 
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
+        {/* Prometeia: full unrestricted editing of Status/Priority/Module/
+            Assignee, any-to-any (updateIssueStatus has no transition
+            restriction on this side, unlike the Bank/SIT branch below).
+            Bank/SIT: a much narrower, comment-gated status-change flow only
+            (see the else branch) — they never get Priority/Module/Assignee
+            controls at all. Again, this branch is only a UX convenience;
+            RLS is what actually prevents a non-Prometeia session from
+            calling updateIssueStatus/updateIssuePriority/etc. with anything
+            other than their allowed transition. */}
         {isProm ? (
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
@@ -277,6 +323,16 @@ export function IssueDetailModal({
         ) : (
           <div className="mb-6 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
+              {/* No entry for the current status in BANK_SIT_ALLOWED_TRANSITIONS
+                  means Bank/SIT has no self-service transition available from
+                  here (e.g. Backlog/Ongoing/Closed) — fall back to a plain,
+                  read-only StatusBadge. When a transition set does exist,
+                  choosing an option here only stages `pendingStatus`; it does
+                  NOT call updateIssueStatus yet — the actual status change is
+                  deferred until the mandatory comment is sent (see
+                  handleComment -> confirmBankSitStatusChange below). The `!`
+                  on the next line is safe only because this branch already
+                  confirmed BANK_SIT_ALLOWED_TRANSITIONS[issue.status] is truthy. */}
               {BANK_SIT_ALLOWED_TRANSITIONS[issue.status] ? (
                 <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
                   Status
@@ -337,6 +393,10 @@ export function IssueDetailModal({
           <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
         </CollapsibleSection>
 
+        {/* Comments doubles as the mandatory note for a Bank/SIT status
+            change: force it open while a status change is pending so the
+            user isn't left staring at a collapsed section with no visible
+            way to satisfy "add a comment to confirm". */}
         <CollapsibleSection title="Comments" icon={IconMessage} defaultOpen={false} forceOpen={pendingStatus !== null}>
           <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (

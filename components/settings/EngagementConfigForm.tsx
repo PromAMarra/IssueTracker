@@ -20,6 +20,9 @@ export type EngagementConfigValues = {
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 
+// Turns a comma-separated free-text input (Modules / Test case packages)
+// into a clean string[]: trims whitespace around each entry and drops empty
+// entries from things like a trailing comma or repeated commas.
 function splitList(value: string): string[] {
   return value
     .split(',')
@@ -27,6 +30,31 @@ function splitList(value: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Shared form for both creating (`NewEngagementForm`) and editing
+ * (`SettingsForm`) an engagement's configuration: name, bank name, ticket ID
+ * prefix, modules, test case packages, SIT/UAT testing period dates, and
+ * per-priority SLA targets (days to close). The two callers differ only in
+ * `initial` values and what `onSubmit` does with the result — all field
+ * rendering, local state, and comma-list parsing lives here.
+ *
+ * Business rules baked into the rendering (not just cosmetic):
+ *  - `sitExpected` toggles whether this engagement has a SIT phase at all;
+ *    unchecking it hides the SIT testing-period date fields here and (per
+ *    the checkbox's own help text) removes SIT from settings/dashboard/
+ *    filters engagement-wide — this is a data-shape decision, not just a UI
+ *    toggle, so downstream code must treat "SIT expected" as authoritative
+ *    rather than inferring it from whether SIT dates are set.
+ *  - `testCasesEnabled` switches the "Test case package" *source* for new
+ *    tickets: off, it's the free-text `testCasePackages` list edited here;
+ *    on, packages/steps instead come from files Prometeia uploads via
+ *    `TestPackageManager`, and this form hides its own package-list field
+ *    (rendered only `!testCasesEnabled`) since it would otherwise be
+ *    unused/misleading input.
+ *  - `keyPrefix` only affects *new* ticket IDs going forward — changing it
+ *    does not renumber or re-prefix existing issues (see the field's own
+ *    help text).
+ */
 export function EngagementConfigForm({
   initial,
   submitLabel,

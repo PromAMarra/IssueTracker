@@ -3,6 +3,20 @@
 import { useState, type FormEvent } from 'react';
 import { addMemberByEmail, type Member, type MemberRole } from '@/app/actions/engagements';
 
+/**
+ * Per-role team roster editor on the Settings page — one instance rendered
+ * per `MemberRole` ('bank' | 'sit' | 'prometeia'), each scoped to a single
+ * `engagementId`. Adding a member here is what actually determines a user's
+ * role/org on this engagement (which in turn drives every `isProm`/org-based
+ * gate elsewhere in the app, and the RLS policies keyed on membership).
+ *
+ * Gotcha: whether an engagement is expected to have a SIT phase at all is a
+ * separate `sitExpected` setting (see `EngagementConfigForm`) — this
+ * component doesn't know or care about that; it will happily render/accept
+ * SIT members regardless. The empty-state copy for 'sit' below calls out a
+ * related nuance: tickets reported by a SIT member are tagged 'sit', not
+ * 'bank', for `Org`-based filtering (see `IssueTable`'s "Raised by" filter).
+ */
 const COPY: Record<MemberRole, { title: string; empty: string; placeholder: string }> = {
   bank: {
     title: 'Bank members (UAT)',
@@ -44,6 +58,12 @@ export function MemberManager({
       const result = await addMemberByEmail(engagementId, email.trim(), role);
       setMessage(result.message);
       if (result.ok) {
+        // Optimistic append with a placeholder userId: '' — the real user id
+        // (and full name, if that person already has a profile) is only
+        // known server-side and isn't returned by addMemberByEmail. This
+        // list re-syncs to real data on next full page load; until then, a
+        // just-added row has no usable userId (see the `key={m.email}` below
+        // sidestepping the empty-id collision for list rendering).
         setMembers((prev) => [...prev, { userId: '', email: email.trim(), fullName: null }]);
         setEmail('');
       }

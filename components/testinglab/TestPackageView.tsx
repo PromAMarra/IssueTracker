@@ -17,6 +17,33 @@ import { ResultBadge } from './ResultBadge';
 
 type Phase = 'sit' | 'uat';
 
+/**
+ * Testing Lab detail view for a single uploaded test package: lists its
+ * steps with independent SIT and UAT results, lets the owning Bank/SIT user
+ * record a result for whichever phase is theirs, and offers a shortcut to
+ * open a ticket (`NewIssueForm`) straight from a failed/passed-with-minor
+ * step. Sits below `Sidebar`'s per-package sub-navigation.
+ *
+ * Critical invariants:
+ *  - SIT and UAT results are fully independent per step (`sitResult` /
+ *    `uatResult` are separate fields) — testing one phase never implies
+ *    anything about the other; the KPI tiles and result column both look at
+ *    only the currently selected `phase`'s field.
+ *  - `canEditPhase = !isProm && phase === userOwnPhase`: Prometeia can never
+ *    edit a result (full control over the *tickets* that come out of
+ *    testing, but not the test executions themselves), and a Bank/SIT user
+ *    can only edit the phase that is actually theirs (a SIT-only user can't
+ *    record UAT results and vice versa) — again enforced for real by RLS on
+ *    the test-steps table, this is only the UI reflection of that rule.
+ *  - "Open ticket" (which reuses `NewIssueForm`) is only offered when
+ *    `canEditPhase` is true AND the result is 'failed' or
+ *    'passed_with_minor' — i.e. never for Prometeia, and never for a
+ *    passing/untested/N-A step.
+ *  - `phase` defaults to the user's own phase when this is a SIT engagement
+ *    and they have one (`userOwnPhase`), otherwise 'uat' — since a
+ *    Prometeia viewer (whose `userOwnPhase` is null) or a UAT-only user has
+ *    no reason to land on the SIT tab by default.
+ */
 export function TestPackageView({
   engagementId,
   detail,
@@ -73,6 +100,10 @@ export function TestPackageView({
   // uat_result are independent testing efforts, not one shared answer.
   const phaseSteps = steps.map((s) => ({ result: phase === 'sit' ? s.sitResult : s.uatResult }));
   const kpis = testPackageKpis(phaseSteps);
+  // Security-sensitive gate: Prometeia never edits results, and a Bank/SIT
+  // user only edits the phase that is actually theirs. This only hides the
+  // <select>/"Open ticket" button — updateTestStepResult is still checked
+  // server-side by RLS regardless of what this boolean says.
   const canEditPhase = !isProm && phase === userOwnPhase;
   const executionOwnerName = phase === 'sit' ? sitExecutionOwnerName : uatExecutionOwnerName;
 
@@ -82,6 +113,10 @@ export function TestPackageView({
     const field = phase === 'sit' ? 'sitResult' : 'uatResult';
     setPendingId(stepId);
     setError(null);
+    // Optimistic update: apply the new result to local state immediately for
+    // a snappy <select>, then roll it back to `previousResult` in the catch
+    // block below if the server action rejects it (e.g. RLS denies it
+    // because this isn't actually the caller's own phase).
     setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, [field]: result } : s)));
     try {
       await updateTestStepResult(stepId, result, previousResult);

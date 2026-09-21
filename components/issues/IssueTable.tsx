@@ -19,6 +19,26 @@ import type { IssueWithNames } from '@/lib/data/issues';
 import type { TeamMember } from '@/lib/data/engagements';
 import { downloadWorkbook } from '@/lib/exportXlsx';
 
+/**
+ * Sortable/filterable tabular view of an engagement's issues — the "List"
+ * counterpart to the kanban `Board`. Both consume the same `IssueWithNames[]`
+ * and call the same `updateIssue*` Server Actions in `app/actions/issues.ts`.
+ *
+ * Responsibility: client-side filter (status/priority/module/org) + sort +
+ * an Excel export (`downloadWorkbook`), plus per-row KPI columns (time spent
+ * in each status, count of times an issue bounced back after reaching Ready
+ * for Test) computed from the engagement's full status-change `history`.
+ * Like `Board`, Prometeia users (`isProm`) get inline editable Status/
+ * Priority/Module/Assignee controls; everyone else gets read-only badges —
+ * again a UX convenience only, not the authorization boundary (that's RLS on
+ * `issues`, plus the separate, more restricted Bank/SIT self-service flow in
+ * `IssueDetailModal`).
+ *
+ * State management: `issues`/`history` are local copies of their respective
+ * props, patched optimistically after each mutation (see `run`) instead of
+ * re-fetching the whole engagement — see the effects below for the
+ * concurrency trade-off this makes.
+ */
 type SortKey =
   | 'key'
   | 'title'
@@ -99,6 +119,9 @@ export function IssueTable({
       { field: string; fromValue: string | null; toValue: string; changedAt: string }[]
     >();
     for (const h of history) {
+      // Only status changes matter for duration/reopen calculations below;
+      // other tracked history fields (assignee, priority, module, …) are
+      // irrelevant here and would otherwise pollute the per-issue timeline.
       if (h.field !== 'status') continue;
       const list = historyByIssue.get(h.issue_id) ?? [];
       list.push({ field: h.field, fromValue: h.from_value, toValue: h.to_value, changedAt: h.changed_at });
@@ -165,6 +188,10 @@ export function IssueTable({
     setPendingId(issueId);
     setError(null);
     try {
+      // Merge the changed fields into the existing issue (rather than
+      // replacing it) and append the action's new history row(s), so the
+      // duration/reopen-count memo above recomputes correctly without a
+      // full re-fetch of either array.
       const { patch, newHistory } = await action();
       setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...patch } : i)));
       setHistory((prev) => [...prev, ...newHistory]);
@@ -176,6 +203,9 @@ export function IssueTable({
   }
 
   async function handleExport() {
+    // Exports exactly the currently filtered/sorted `rows`, not all `issues`
+    // — "what you see is what you export" — including the same computed
+    // duration/reopen-count columns shown in the table.
     await downloadWorkbook(
       [
         {
@@ -371,6 +401,10 @@ export function IssueTable({
                           {m.name}
                         </option>
                       ))}
+                      {/* Reporter (Bank/SIT) is never in `teamMembers` (Prometeia's
+                          own team), but an issue may already be assigned back to
+                          them — without this, the <select> would show "Unassigned"
+                          for a value that doesn't match any of its <option>s. */}
                       {!teamMembers.some((m) => m.id === issue.reporter_id) && (
                         <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
                       )}

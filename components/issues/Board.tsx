@@ -11,6 +11,28 @@ import type { Priority, Status } from '@/lib/types';
 import type { IssueWithNames } from '@/lib/data/issues';
 import type { TeamMember } from '@/lib/data/engagements';
 
+/**
+ * Kanban-style board view of an engagement's issues, grouped into one column
+ * per `Status` (see `STATUSES` in `lib/types`). This is one of two main
+ * issue views (the other being the tabular `IssueTable`); both share the
+ * same underlying data and mutation actions.
+ *
+ * Responsibility: renders each issue as a card and, for Prometeia users
+ * (`isProm`), exposes inline Status/Priority/Assignee `<select>`s that call
+ * the `updateIssue*` Server Actions in `app/actions/issues.ts`. For
+ * non-Prometeia (Bank/SIT) users it renders read-only `StatusBadge`s instead
+ * — this `isProm` gate is a UX convenience only; the actual authorization
+ * boundary is Postgres RLS on the `issues` table (Bank/SIT's much more
+ * restricted self-service transitions are handled instead in
+ * `IssueDetailModal` via `BANK_SIT_ALLOWED_TRANSITIONS`, not here — this
+ * board never lets a Bank/SIT user change status directly).
+ *
+ * State management: `issues` is a local copy of the `issues` prop, patched
+ * optimistically field-by-field after each mutation (see `run` below) so a
+ * single dropdown change doesn't force a full-page/router refresh. See the
+ * effects below for how this trades off against picking up other users'
+ * concurrent edits.
+ */
 const COLUMN_LABELS: Record<Status, string> = {
   backlog: 'Backlog',
   ongoing: 'Ongoing',
@@ -63,6 +85,9 @@ export function Board({
     setPendingId(issueId);
     setError(null);
     try {
+      // The server action returns only the fields it actually changed
+      // (`patch`); merge them into the existing local issue rather than
+      // replacing it, so unrelated fields already held in state aren't lost.
       const { patch } = await action();
       setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, ...patch } : i)));
     } catch (err) {
@@ -84,6 +109,8 @@ export function Board({
           <div className="flex flex-col gap-3">
             {issues
               .filter((i) => i.status === status)
+              // Critical-first ordering within a column; PRIORITY_RANK gives each
+              // priority a sort weight since Priority itself isn't naturally ordered.
               .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
               .map((issue) => (
                 <div key={issue.id} className="rounded-lg border border-hairline bg-white p-3">
@@ -152,6 +179,13 @@ export function Board({
                               {m.name}
                             </option>
                           ))}
+                          {/* The reporter (a Bank/SIT user) is never in `teamMembers`
+                              (that list is Prometeia's own team, i.e. valid
+                              assignees), but an issue can still be assigned back to
+                              them (e.g. "needs more info from reporter"). Without this
+                              extra option, an issue already assigned to its reporter
+                              would silently fall back to showing "Unassigned" in the
+                              <select>, since its value wouldn't match any <option>. */}
                           {!teamMembers.some((m) => m.id === issue.reporter_id) && (
                             <option value={issue.reporter_id}>↩ Back to {issue.reporterName} (reporter)</option>
                           )}

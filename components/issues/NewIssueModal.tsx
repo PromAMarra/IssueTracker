@@ -6,6 +6,14 @@ import { NewIssueForm } from './NewIssueForm';
 import type { TeamMember } from '@/lib/data/engagements';
 import type { TestCaseStepOption } from '@/app/actions/testPackages';
 
+/**
+ * "Open a ticket" button + its own modal wrapper around `NewIssueForm`, used
+ * from the Board/List toolbars. (`TestPackageView` embeds `NewIssueForm`
+ * directly in its own modal instead of reusing this component, since it
+ * needs to pre-fill `initialTestCasePackage` from a specific test step.)
+ * Purely local UI state (`open`) — closes itself via the `onCreated`
+ * callback once `NewIssueForm` successfully creates the issue.
+ */
 export function NewIssueModal({
   engagementId,
   modules,

@@ -27,6 +27,28 @@ const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
 
 type SubItem = { id: string; label: string; href: string };
 
+/**
+ * Left-hand navigation for an engagement: Board / List / Dashboard /
+ * Testing Lab / Settings, with per-section sub-navigation (Dashboard's
+ * Issue/Testing Insights views; Testing Lab's list of uploaded test
+ * packages). Section visibility is trimmed by role/config, not by a generic
+ * permissions list: Settings only for Prometeia (`isProm`) — a UX
+ * convenience only, the real gate is RLS on whatever Settings actually
+ * changes — and Testing Lab only when `testCasesEnabled` is on for this
+ * engagement (there being nothing to test-manage otherwise).
+ *
+ * Active-section/sub-item highlighting is derived from the URL
+ * (`activeNavSection` from `lib/navSections`, shared with `Breadcrumbs`) and
+ * from `searchParams`, and is written to deliberately mirror each target
+ * page's own default-resolution logic (e.g. Dashboard defaulting to "Issue
+ * Insights" when no `?view=` is present) — if a page's default changes, this
+ * component's `activeSubItemId` logic must be updated to match, or the
+ * sidebar will show the wrong item as selected.
+ *
+ * The collapse toggle is desktop-only and persisted per-browser via
+ * `localStorage` (see the effect below for the deliberate SSR-safe
+ * expand-then-collapse flash tradeoff this implies).
+ */
 export function Sidebar({
   engagementId,
   isProm,

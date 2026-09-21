@@ -1,5 +1,15 @@
 import type { Priority } from '@/lib/types';
 
+/**
+ * Read-only pill showing an issue's priority as a colored dot + label.
+ * Purely presentational — used wherever a priority needs to be displayed
+ * without letting the viewer change it (e.g. Bank/SIT views of Board/
+ * IssueTable/IssueDetailModal, where priority editing is a Prometeia-only
+ * capability enforced server-side, not by this component).
+ * `DOT_COLOR`/`LABELS` must stay in sync with the `Priority` union in
+ * `lib/types` — TypeScript's `Record<Priority, string>` will fail to compile
+ * if a priority value is added/removed without updating these maps.
+ */
 const DOT_COLOR: Record<Priority, string> = {
   critical: '#B42318',
   high: '#DC5F45',
