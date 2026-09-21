@@ -1,5 +1,19 @@
 import type { TestResult } from './types';
 
+/**
+ * Pure analytics functions backing the "Testing Insights" dashboard view's
+ * trend chart and per-package breakdown chart (see
+ * app/(app)/[engagementId]/dashboard/page.tsx, components/dashboard/
+ * TestedTrendChart.tsx and PackageResultsChart.tsx). Like lib/kpi.ts, these
+ * take already-fetched, already phase-resolved data and return plain data —
+ * no Supabase calls, no framework dependencies.
+ *
+ * `TestPackageStepResult` is intentionally phase-agnostic: since migration
+ * 0022 split step results into independent `sit_result`/`uat_result`
+ * columns, callers must pick ONE phase's result/updated-at pair per step
+ * before calling into this module (see the dashboard page's
+ * `toSitResult`/`toUatResult` mappers) — nothing here knows about SIT vs UAT.
+ */
 export type TestPackageStepResult = { result: TestResult | null; resultUpdatedAt: string | null };
 
 export type TestedTrendPoint = { date: string; cumulativeTested: number | null; targetCumulative: number };
@@ -26,6 +40,13 @@ export function testedTrend(
 
   return days.map((day) => {
     const dayEndMs = new Date(`${day}T23:59:59.999Z`).getTime();
+    // `cumulativeTested` is left null for any day after "now" — the testing
+    // period (startDate/endDate) is a configured window that can extend into
+    // the future, and there is no real data yet for days that haven't
+    // happened, so the actual-progress line should stop rather than flatline
+    // at today's count. A step with no `resultUpdatedAt` (tested before this
+    // column existed, i.e. legacy data) is conservatively counted as tested
+    // on every day, since we have no timestamp to place it more precisely.
     const cumulativeTested =
       day <= todayStr
         ? steps.filter(
@@ -34,6 +55,10 @@ export function testedTrend(
               (s.resultUpdatedAt === null || new Date(s.resultUpdatedAt).getTime() <= dayEndMs),
           ).length
         : null;
+    // Straight-line target: what fraction of the period's elapsed time has
+    // passed, applied to the total step count — clamped to 100% once the
+    // period has ended, so the target line never implies "more than all
+    // steps".
     const elapsedMs = Math.min(dayEndMs, periodEndMs) - periodStartMs;
     const targetCumulative = Math.round(total * Math.min(1, elapsedMs / periodDurationMs));
     return { date: day, cumulativeTested, targetCumulative };

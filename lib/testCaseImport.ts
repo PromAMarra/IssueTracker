@@ -1,5 +1,27 @@
 import type { TestResult } from './types';
 
+/**
+ * Parses an uploaded UAT/SIT test-script spreadsheet — already converted to
+ * an array of row objects (e.g. via `XLSX.utils.sheet_to_json`) — into
+ * structured `ParsedTestStep` records ready to be inserted as
+ * `test_package_steps` rows. The only caller is
+ * app/actions/testPackages.ts's `uploadTestPackage`, which does the actual
+ * file parsing (XLSX -> rows) and the DB insert; this module is the pure,
+ * synchronous, easily-testable middle step and has no I/O of its own.
+ *
+ * Header matching is case- and whitespace-insensitive (`normalizeHeader`),
+ * so the sheet's exact header casing/spacing doesn't matter, but the header
+ * *text* itself must still match one of REQUIRED_HEADERS.
+ *
+ * Gotcha: the optional "Result" column here is a pre-existing outcome
+ * baked into the uploaded sheet (e.g. results from an earlier round). Since
+ * migration 0022 split test results into independent `sit_result`/
+ * `uat_result` columns, the caller maps this parsed `result` onto
+ * `uat_result` only — an uploaded sheet's baked-in result is treated as a
+ * UAT baseline, never a SIT one, because UAT is this app's always-present
+ * phase. Do not assume `result` here corresponds to a generic/shared result
+ * column in the database; there isn't one anymore.
+ */
 export type ParsedTestStep = {
   stepNumber: number;
   stepName: string;
@@ -65,6 +87,11 @@ export function parseTestCaseSheet(rows: Record<string, unknown>[]): ParseTestCa
           : typeof rawStepNumber === 'string' && rawStepNumber.trim() !== ''
             ? Number(rawStepNumber)
             : NaN;
+      // A missing/non-numeric "Step" cell falls back to the row's 1-based
+      // position in the sheet rather than failing the whole import — the
+      // step number is a display/ordering aid, not a unique key the DB
+      // depends on, so a best-effort default is preferable to rejecting an
+      // otherwise-valid upload over one bad cell.
       const stepNumber = Number.isInteger(parsedStepNumber) ? parsedStepNumber : index + 1;
 
       return {
