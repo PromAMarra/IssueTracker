@@ -264,7 +264,7 @@ export default async function DashboardPage({
               )}
               <PackageResultsChart data={packageBreakdown} />
               <WorkloadTable rows={workloadRows} />
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <DailyTestsByOwnerChart label="SIT" points={sitDailyTests} owners={sitOwners} />
                 <DailyTestsByOwnerChart label="UAT" points={uatDailyTests} owners={uatOwners} />
               </div>
