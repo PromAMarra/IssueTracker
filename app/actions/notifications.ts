@@ -3,6 +3,29 @@
 import { createServerClient } from '@/lib/supabase/server';
 import { getSessionUser } from '@/lib/auth/session';
 
+/**
+ * Server Actions backing the notification bell (`NotificationBell.tsx`):
+ * list a user's own notifications, get the unread count for the badge, mark
+ * one or all as read, and delete notifications the user has dismissed.
+ *
+ * Every notification ROW is written exclusively by a Postgres trigger —
+ * `notify_issue_assigned` / `notify_comment_added` / `notify_status_changed`
+ * (supabase/migrations/0008, 0009; function bodies redefined in 0014 and
+ * 0017) — never by application code. This file only ever reads and updates
+ * rows that already exist; nothing here inserts into `notifications`.
+ *
+ * Authorization: every function below scopes its query/update/delete to
+ * `user_id = session.id` (the caller's own notifications). This mirrors, and
+ * is independently re-enforced by, the `notifications_select_own` /
+ * `notifications_update_own` / `notifications_delete_own` RLS policies
+ * (0008_notifications.sql, 0015_notifications_delete_policy.sql) — a user
+ * can only ever see or touch their own rows, at both the app layer and the
+ * database layer.
+ *
+ * `NotificationType` below must stay a superset of every `type` value the DB
+ * check constraint (and the trigger functions above) can write; it currently
+ * covers all three the app produces.
+ */
 export type NotificationType = 'issue_assigned' | 'comment_added' | 'status_changed';
 
 export type NotificationRow = {
@@ -94,6 +117,9 @@ export async function markAllNotificationsRead() {
 }
 
 export async function deleteNotifications(ids: string[]) {
+  // Short-circuit before touching the session/DB at all: an empty selection
+  // is a genuine no-op from the "delete all" toolbar button, and avoids an
+  // `.in('id', [])` call for no benefit.
   if (ids.length === 0) return;
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
