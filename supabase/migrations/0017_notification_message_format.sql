@@ -1,3 +1,23 @@
+-- =============================================================================
+-- MIGRATION 0017_notification_message_format.sql
+--
+-- Responsibility: rewrites the three notification trigger functions
+-- (originally from 0008/0009, already amended by 0014) to store a short,
+-- self-contained message instead of one that repeats the issue key/title.
+--
+-- How it fits in: notifications.message is now purely the action phrase
+-- (e.g. "Assigned to Jane Doe", "Status changed to Closed"); the issue key
+-- and actor name are rendered separately client-side by NotificationBell.tsx
+-- using notifications.issue_id / actor_id. Changing this message format
+-- again requires updating both this SQL and that component together.
+--
+-- Gotcha: the status-label mapping (v_status_label case, below) duplicates
+-- display strings that also live in the client (Board.tsx/IssueTable.tsx/
+-- IssueDetailModal.tsx) and in statusEmailLabel() - see the inline comment
+-- below. There is no single source of truth for these labels; keep every
+-- copy in sync by hand when a status label changes.
+-- =============================================================================
+
 -- Standardize the in-app notification body to a short, self-contained action
 -- phrase: issue key and actor name are now rendered separately by the client
 -- (NotificationBell.tsx, actor resolved via the existing actor_id column),

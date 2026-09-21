@@ -1,3 +1,30 @@
+-- =============================================================================
+-- MIGRATION 0018_test_case_tracking.sql
+--
+-- Responsibility: introduces the structured test-execution model -
+-- test_packages (an uploaded UAT/SIT script) and test_package_steps (its
+-- individual steps, each with a pass/fail result) - plus the RLS policies
+-- and column-pinning trigger that let bank/SIT testers record results
+-- without being able to alter the script content itself.
+--
+-- How it fits in: this is the first table in the schema where a
+-- non-Prometeia role (bank/SIT) is granted an UPDATE policy at all. Every
+-- previous update policy from 0002_rls.sql onward was either Prometeia-only
+-- or restricted to a row's own owner. Superseded in part by
+-- 0022_phase_scoped_results_and_owners.sql, which splits the single
+-- `result` column defined here into independent sit_result/uat_result
+-- columns - read that file before assuming `result` still exists.
+--
+-- Gotcha: as with every narrow UPDATE grant to a restricted role in this
+-- app, "RLS gates rows, not columns" - the update policy below only checks
+-- WHICH rows a bank/SIT user may touch, not WHICH columns of those rows.
+-- Column-level protection is enforced entirely by the
+-- test_step_result_only() trigger beneath it, which unconditionally
+-- overwrites every column except the result fields back to its OLD value.
+-- Removing or weakening that trigger - even though the RLS policy itself
+-- would look unchanged - silently lets a bank/SIT member rewrite step
+-- content via a direct API call.
+-- =============================================================================
 alter table public.engagements
   add column test_cases_enabled boolean not null default false;
 
@@ -16,6 +43,8 @@ create table public.test_package_steps (
   step_name text not null,
   step_description text not null,
   expected_outcome text not null,
+  -- 'na' = this step does not apply to the current test run (distinct from
+  -- "not yet tested", represented by result being null).
   result text check (result in ('passed', 'passed_with_minor', 'failed', 'na')),
   result_updated_by uuid references public.profiles(id),
   result_updated_at timestamptz
@@ -73,6 +102,9 @@ begin
   new.step_description  := old.step_description;
   new.expected_outcome  := old.expected_outcome;
   new.test_package_id   := old.test_package_id;
+  -- Force result_updated_by to the actual caller rather than trusting any
+  -- value the client attempted to submit, so this audit column can't be
+  -- forged to attribute a change to someone else.
   new.result_updated_by := auth.uid();
   return new;
 end;

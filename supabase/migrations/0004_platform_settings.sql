@@ -1,3 +1,20 @@
+-- =============================================================================
+-- MIGRATION 0004_platform_settings.sql
+--
+-- Responsibility: adds a singleton settings table for platform-wide (not
+-- per-engagement) configuration.
+--
+-- How it fits in: read by every authenticated user (branding shown in the
+-- shared app header/shell) and updated only from Prometeia's admin settings
+-- screen.
+--
+-- Gotcha: the singleton-row trick below (boolean primary key pinned to
+-- `true`) only prevents a SECOND row from being inserted - it does not stop
+-- the single existing row from being deleted. There is no delete policy on
+-- this table, so it also cannot be deleted through an RLS-scoped client;
+-- only a service-role/admin connection could remove it.
+-- =============================================================================
+
 -- Single-row table for platform-wide (not per-engagement) settings, currently
 -- just the Prometeia logo shown in the header. `id` is pinned to `true` so the
 -- table can only ever hold exactly one row.

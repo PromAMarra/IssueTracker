@@ -1,3 +1,23 @@
+-- =============================================================================
+-- MIGRATION 0001_schema.sql
+--
+-- Responsibility: creates the foundational schema for the whole application -
+-- profiles (mirrors auth.users), engagements (one per bank/client),
+-- engagement_members (the roster), issues (the core UAT/SIT ticket), and the
+-- three issue-scoped child tables (comments, history, attachments).
+--
+-- How it fits in: every later migration in this directory either extends one
+-- of these tables (new columns/constraints) or layers Row-Level Security on
+-- top of them (see 0002_rls.sql onward). Row-Level Security is NOT enabled by
+-- this file - these tables are wide open until 0002_rls.sql runs immediately
+-- after. Never deploy 0001 without 0002 following in the same migration run.
+--
+-- Gotcha: public.profiles.id intentionally equals auth.users.id (same UUID),
+-- so every FK in this schema that "points at a user" (reporter_id, assignee,
+-- author_id, etc.) can reference public.profiles directly instead of the
+-- auth schema, which app/client code cannot query.
+-- =============================================================================
+
 -- profiles mirrors auth.users with app-specific fields
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -7,6 +27,10 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- SECURITY DEFINER is required here: this trigger fires during signup,
+-- before the new user has any session, so it must run with the function
+-- owner's privileges to insert into public.profiles despite that table's
+-- RLS (added in 0002_rls.sql) blocking every other unauthenticated write.
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -47,11 +71,18 @@ create table public.issues (
   key text not null,
   title text not null,
   description text not null default '',
+  -- Allowed status VALUES only - the allowed TRANSITIONS between them (who
+  -- may move an issue from one status to another) are enforced separately
+  -- by RLS policies/triggers in 0002_rls.sql and
+  -- 0021_bank_sit_transitions.sql, plus the app-layer lib/issueAccess.ts.
   status text not null default 'backlog'
     check (status in ('backlog', 'ongoing', 'ready_for_test', 'closed', 'rejected')),
   priority text not null
     check (priority in ('critical', 'high', 'medium', 'low')),
   module text,
+  -- Which org filed the ticket. Widened to also allow 'sit' in
+  -- 0012_sit_members.sql, once SIT (IVS) testers became distinct from UAT
+  -- (bank) testers.
   org text not null check (org in ('prometeia', 'bank')),
   reporter_id uuid not null references public.profiles(id),
   assignee text,
@@ -68,6 +99,10 @@ create table public.issue_comments (
   created_at timestamptz not null default now()
 );
 
+-- Append-only audit trail: one row per field change on an issue. Only ever
+-- written by Prometeia-driven server actions (see history_insert_prometeia
+-- in 0002_rls.sql) - bank/SIT-initiated transitions from
+-- 0021_bank_sit_transitions.sql do not currently write history rows.
 create table public.issue_history (
   id uuid primary key default gen_random_uuid(),
   issue_id uuid not null references public.issues(id) on delete cascade,
@@ -87,6 +122,12 @@ create table public.issue_attachments (
   uploaded_at timestamptz not null default now()
 );
 
+-- Atomic "read current sequence and increment" via a single UPDATE ...
+-- RETURNING, so two people creating tickets in the same engagement at the
+-- same instant can never be handed the same sequence number (no separate
+-- SELECT-then-UPDATE race window). SECURITY DEFINER plus the explicit
+-- is_engagement_member() check stands in for issues_insert's own RLS check,
+-- since this function runs before the issue row itself exists.
 create or replace function public.next_issue_key(p_engagement_id uuid)
 returns text as $$
 declare

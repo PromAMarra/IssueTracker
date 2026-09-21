@@ -1,3 +1,21 @@
+-- =============================================================================
+-- MIGRATION 0014_notify_self_actions.sql
+--
+-- Responsibility: removes the "don't notify me about my own action"
+-- suppression from all three notification trigger functions defined in
+-- 0008_notifications.sql / 0009_status_notifications.sql.
+--
+-- How it fits in: replaces (create or replace) the same three function
+-- bodies in place; the triggers that call them (from 0008/0009) are
+-- untouched. See the detailed rationale in the comment block immediately
+-- below for exactly which conditions were removed vs. deliberately kept.
+--
+-- Gotcha: read the per-function comments below carefully before touching
+-- these again - the dedupe guards (assignee vs. reporter) and the
+-- real-change guards (`is distinct from`) look similar to the removed
+-- self-action checks but serve a different purpose and must stay.
+-- =============================================================================
+
 -- Notify people about their own actions too. Until now the three notification
 -- triggers all skipped the person who performed the action (`<> auth.uid()`,
 -- `<> new.author_id`), so e.g. a Prometeia user who assigned a ticket to

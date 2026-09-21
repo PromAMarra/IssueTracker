@@ -1,3 +1,18 @@
+-- =============================================================================
+-- MIGRATION 0019_dispute_rejection.sql
+--
+-- Responsibility: grants bank/SIT users a single narrow UPDATE permission on
+-- issues - moving a 'rejected' issue back to 'ongoing' ("disputing" it) -
+-- via a new policy plus a column-pinning trigger.
+--
+-- SUPERSEDED: 0021_bank_sit_transitions.sql drops the policy and trigger
+-- defined here and replaces them with a version that allows two more
+-- transitions (resolving a 'ready_for_test' issue to 'closed' or
+-- 'rejected'). Do not treat this file as reflecting current behavior in
+-- isolation - read 0021 for what is actually active today. This file is
+-- kept only because migrations are an append-only history.
+-- =============================================================================
+
 -- Bank/SIT normally cannot update issues at all (issues_update_prometeia
 -- below is Prometeia-only) — this is the one narrow exception: disputing a
 -- rejection sends the ticket back to Prometeia for reconsideration. RLS

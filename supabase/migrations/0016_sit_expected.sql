@@ -1,1 +1,15 @@
+-- =============================================================================
+-- MIGRATION 0016_sit_expected.sql
+--
+-- Responsibility: adds engagements.sit_expected, a boolean flag for whether
+-- a given engagement is expected to have a SIT phase at all (some
+-- bank/client engagements skip SIT and go straight to UAT).
+--
+-- How it fits in: read by the dashboard and testing-period UI to decide
+-- whether to show SIT-related views/columns for an engagement at all,
+-- independent of whether any SIT dates (0011_testing_periods.sql) are set.
+--
+-- Gotcha: defaults to true, so every engagement created before this
+-- migration is treated as SIT-expected unless explicitly changed afterward.
+-- =============================================================================
 alter table public.engagements add column sit_expected boolean not null default true;

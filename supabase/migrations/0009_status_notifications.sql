@@ -1,3 +1,20 @@
+-- =============================================================================
+-- MIGRATION 0009_status_notifications.sql
+--
+-- Responsibility: adds a third notification type, status_changed, and the
+-- trigger that fires it whenever issues.status is updated.
+--
+-- How it fits in: widens the notifications_type_check constraint added in
+-- 0008_notifications.sql, then adds a brand-new trigger function/trigger
+-- pair, additive alongside notify_issue_assigned/notify_comment_added (it
+-- does not replace either of them).
+--
+-- Gotcha: 'reopened' below is a display label synthesized only for the
+-- notification message - it is never a real value of issues.status (whose
+-- check constraint, from 0001_schema.sql, only allows backlog/ongoing/
+-- ready_for_test/closed/rejected). Do not confuse it with an actual status.
+-- =============================================================================
+
 -- Extend notifications to also cover status changes (e.g. reporter should
 -- hear when their ticket moves to "Ready for Test" or "Closed"). The type
 -- check constraint needs to be widened first.
@@ -11,6 +28,9 @@ declare
   v_status_label text;
 begin
   if new.status is distinct from old.status then
+    -- Cosmetic-only relabeling: a transition out of 'closed' back into an
+    -- active state reads better to the recipient as "reopened" than as
+    -- whatever the literal new status value happens to be.
     v_status_label := case
       when old.status = 'closed' and new.status in ('ongoing', 'backlog', 'ready_for_test') then 'reopened'
       else new.status

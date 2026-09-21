@@ -1,3 +1,16 @@
+-- =============================================================================
+-- MIGRATION 0010_perf_indexes.sql
+--
+-- Responsibility: adds indexes on FK columns that Postgres does not create
+-- automatically, covering the query patterns used by the board/list views,
+-- the dashboard, and ticket detail pages.
+--
+-- How it fits in: pure performance migration - no schema shape, RLS, or
+-- behavior changes. Safe to reorder relative to most other migrations, as
+-- long as it runs after 0001_schema.sql (needs the tables/columns to exist)
+-- and after 0008_notifications.sql (assignee_id did not exist before that).
+-- =============================================================================
+
 -- Postgres does not auto-index the referencing side of a foreign key (only
 -- the referenced primary key gets one). These columns are filtered on in
 -- every board/list/dashboard load and every ticket-detail open, so without

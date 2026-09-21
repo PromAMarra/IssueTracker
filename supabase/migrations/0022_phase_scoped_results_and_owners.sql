@@ -1,3 +1,29 @@
+-- =============================================================================
+-- MIGRATION 0022_phase_scoped_results_and_owners.sql
+--
+-- Responsibility: splits test_package_steps' single result/result_updated_by/
+-- result_updated_at columns (from 0018_test_case_tracking.sql) into
+-- independent sit_result/uat_result column pairs, backfills existing data
+-- into the correct phase, and adds per-phase execution-owner columns to
+-- test_packages.
+--
+-- How it fits in: this is the current shape of test_package_steps' result
+-- tracking - app code (Server Actions, dashboard aggregation) must read/
+-- write sit_result and uat_result independently and must not expect a
+-- single unified `result` column to exist any more.
+--
+-- Gotcha: the column-pinning trigger (test_step_result_only, replaced
+-- below) branches on the ACTOR's own engagement_members.phase to decide
+-- which of sit_result/uat_result it will allow through - it does not look
+-- at which phase the test_package or step "belongs to" (there is no such
+-- concept; a single step can carry both a SIT and a UAT result). A
+-- Prometeia member calling this update path (which they normally wouldn't,
+-- since Prometeia's own updates go through test_packages_update_prometeia,
+-- not this trigger) would fall into the "else" branch and be treated as
+-- UAT, because their membership row has no phase set - see the inline
+-- comment above actor_phase below.
+-- =============================================================================
+
 -- Phase-scoped test results: SIT and UAT testers now record independent
 -- results for the same step (a package's SIT progress and UAT progress are
 -- genuinely different testing efforts, not one shared answer), replacing
@@ -68,11 +94,20 @@ begin
   new.expected_outcome  := old.expected_outcome;
   new.test_package_id   := old.test_package_id;
 
+  -- Looks up the ACTOR's phase for this specific engagement (not the
+  -- step's or package's phase - steps/packages don't have a single phase,
+  -- they carry both SIT and UAT results independently). A user's phase can
+  -- therefore only ever be resolved per-engagement, matching how
+  -- engagement_members.phase itself is scoped (0012_sit_members.sql).
   select em.phase into actor_phase
   from public.test_packages tp
   join public.engagement_members em on em.engagement_id = tp.engagement_id
   where tp.id = new.test_package_id and em.user_id = auth.uid();
 
+  -- Anyone who is not a SIT member for this engagement - including a
+  -- UAT/bank member, or a Prometeia member with no phase row at all - falls
+  -- through to the `else` branch and is treated as UAT. This mirrors the
+  -- backfill rule above: UAT is this app's always-present default phase.
   if actor_phase = 'sit' then
     new.uat_result            := old.uat_result;
     new.uat_result_updated_by := old.uat_result_updated_by;
@@ -100,6 +135,9 @@ alter table public.test_packages
   add column if not exists sit_execution_owner_id uuid references public.profiles(id),
   add column if not exists uat_execution_owner_id uuid references public.profiles(id);
 
+-- No WITH CHECK needed: unlike the bank/SIT-restricted tables above, this
+-- grant only ever goes to Prometeia (a trusted role for this table), so
+-- there's no need for a column-pinning trigger here either.
 drop policy if exists "test_packages_update_prometeia" on public.test_packages;
 create policy "test_packages_update_prometeia" on public.test_packages for update
   using (is_prometeia_user());
