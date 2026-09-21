@@ -3,6 +3,18 @@ import type { User } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 import { fetchWithRetry } from './fetchWithRetry';
 
+/**
+ * Called from the root middleware.ts on (almost) every request. Two jobs:
+ * (1) refresh the Supabase session cookies (via createServerClient's
+ * cookies.setAll, which Supabase calls internally when it rotates tokens),
+ * so Server Components later in the same request see a fresh session, and
+ * (2) redirect signed-out users away from protected routes.
+ *
+ * Critical invariant: this is a UX redirect only, not the security boundary
+ * — see the inline comment below on the auth-check failure path, and the
+ * app/(app)/layout.tsx Node.js-runtime session check, which is what actually
+ * gates rendering. RLS is what ultimately protects the data either way.
+ */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 

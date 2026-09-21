@@ -1,3 +1,9 @@
+/**
+ * Edge-runtime-safe fetch wrapper with retry/backoff, used as the `global.fetch`
+ * override for the Supabase client created in lib/supabase/middleware.ts
+ * (Next.js middleware runs in the Edge runtime, which cannot load the
+ * Node-only lib/supabase/fetchWithRetryNode.ts variant used everywhere else).
+ */
 // This environment's outbound connection to Supabase intermittently fails a
 // single request outright (fetch throws instead of returning a response).
 // Retry a couple of times with backoff before giving up — a subsequent

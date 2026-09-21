@@ -1,5 +1,13 @@
 import { getResendClient, isResendConfigured } from './resend';
 
+/**
+ * Thin, defensive wrapper around Resend for sending a single notification
+ * email. This is the only entry point Server Actions should use to send
+ * mail — it centralizes the "is email even configured" checks and the
+ * never-throw guarantee described below, so callers (e.g.
+ * app/actions/issues.ts) can fire a notification without any try/catch of
+ * their own and without risking the triggering mutation's success.
+ */
 export interface SendNotificationEmailInput {
   to: string;
   subject: string;

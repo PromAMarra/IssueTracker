@@ -2,6 +2,24 @@ import { cache } from 'react';
 import { createServerClient } from '@/lib/supabase/server';
 import type { SlaDays } from '@/lib/types';
 
+/**
+ * Read-only data-access layer for `engagements` and their membership
+ * rosters (`engagement_members`). These functions are called directly from
+ * Server Components (engagement layout, dashboard, settings) and Server
+ * Actions using the per-request Supabase client (anon key + caller's
+ * session cookies) — there is no service-role/admin client anywhere here.
+ *
+ * Critical invariant: several queries below (listAccessibleEngagements,
+ * getEngagement) apply NO membership filter in application code — they
+ * simply select from `engagements` with no `.eq('member', ...)` clause.
+ * They rely entirely on Postgres Row-Level Security policies to scope the
+ * result set to engagements the caller actually belongs to. If those RLS
+ * policies are ever loosened or misconfigured, these functions will start
+ * returning other clients' engagements with no JS-level check to catch it.
+ *
+ * All mutations on these tables live in app/actions/engagements.ts; this
+ * file is queries only.
+ */
 export type EngagementSummary = { id: string; name: string; bank_name: string };
 
 export type Engagement = EngagementSummary & {
@@ -22,6 +40,8 @@ export type Engagement = EngagementSummary & {
 // page rendered inside it; cache() dedupes that to one query per request.
 export const listAccessibleEngagements = cache(async (): Promise<EngagementSummary[]> => {
   const supabase = createServerClient();
+  // No `.eq(...)` membership filter here on purpose — RLS on `engagements`
+  // is what scopes this to the caller's engagements. See the file header.
   const { data, error } = await supabase
     .from('engagements')
     .select('id, name, bank_name')
@@ -32,6 +52,9 @@ export const listAccessibleEngagements = cache(async (): Promise<EngagementSumma
 
 export const getEngagement = cache(async (id: string): Promise<Engagement | null> => {
   const supabase = createServerClient();
+  // Same pattern as listAccessibleEngagements: fetching by id alone with no
+  // membership check — a non-member querying an id they don't belong to is
+  // expected to get `null` back from RLS, not from a check in this function.
   const { data, error } = await supabase
     .from('engagements')
     .select(

@@ -1,5 +1,22 @@
 import type { Status } from '../types';
 
+/**
+ * Pure content builders for issue-related notification emails (assignment,
+ * comment, status change) and the recipient-id logic that decides who gets
+ * them. No I/O here — callers (Server Actions) pass the resulting
+ * subject/body into lib/email/sendNotificationEmail.ts, and pass the
+ * recipient ids to look up addresses and send individually.
+ *
+ * Critical gotcha: this is a deliberate DUAL-WRITE with the DB triggers
+ * `notify_status_changed` and `notify_comment_added` (see migration 0014),
+ * which create the in-app notification rows independently. The
+ * recipient-selection functions below are written to mirror those triggers'
+ * logic exactly. If a trigger's notification rules ever change, this file
+ * must be updated to match, or in-app notifications and emails will silently
+ * diverge (e.g. someone gets emailed about an event they don't see a bell
+ * notification for, or vice versa) — there is no shared source of truth
+ * enforcing the two stay in sync.
+ */
 const APP_NAME = 'Prometeia Issue Tracker';
 
 export type IssueEmailContext = {
