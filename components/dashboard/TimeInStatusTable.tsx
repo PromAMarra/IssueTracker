@@ -9,7 +9,20 @@ const STATUS_LABELS: Record<(typeof STATUSES)[number], string> = {
   rejected: 'Rejected',
 };
 
+/**
+ * TimeInStatusTable — Issue Insights dashboard widget.
+ *
+ * Matrix of average days spent in each status, broken down by priority
+ * (Priority x Status grid). All duration math — including correctly summing
+ * an issue's time in a status across multiple visits if it was reopened —
+ * is done upstream by lib/kpi.ts's `timeInStatusByPriority()`; this
+ * component only looks up each priority/status pair and renders it.
+ */
 export function TimeInStatusTable({ rows }: { rows: TimeInStatusRow[] }) {
+  // Indexed by "priority:status" for O(1) lookup while iterating the full
+  // PRIORITIES x STATUSES grid below; a combination with no data (e.g. no
+  // critical issue has ever been "Rejected") simply has no entry here and
+  // renders as "—" rather than "0d".
   const byKey = new Map(rows.map((r) => [`${r.priority}:${r.status}`, r]));
 
   return (

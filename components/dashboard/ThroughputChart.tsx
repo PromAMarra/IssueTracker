@@ -3,6 +3,15 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ThroughputBucket } from '@/lib/kpi';
 
+/**
+ * ThroughputChart — Issue Insights dashboard widget (client component).
+ *
+ * Line chart of issues opened vs. closed per week, over the trailing window
+ * produced by lib/kpi.ts's `throughputByWeek()`. The window length itself is
+ * decided by the caller (the dashboard page currently passes `8` weeks) and
+ * is only reflected here indirectly, via `buckets.length` in the heading.
+ * Purely presentational otherwise.
+ */
 export function ThroughputChart({ buckets }: { buckets: ThroughputBucket[] }) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">

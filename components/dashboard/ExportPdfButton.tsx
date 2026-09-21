@@ -3,6 +3,20 @@
 import { useState } from 'react';
 import { exportElementToPdf } from '@/lib/exportPdf';
 
+/**
+ * ExportPdfButton — Issue Insights dashboard action (client component).
+ *
+ * Renders the dashboard's on-screen content (the DOM node identified by
+ * `targetId` — the `#dashboard-export-root` wrapper on the dashboard page)
+ * into a multi-page PDF via lib/exportPdf.ts's `exportElementToPdf()`
+ * (html2canvas -> jsPDF), and triggers a client-side download. This is a
+ * visual snapshot of the rendered page, not a data export — for a
+ * spreadsheet of the underlying numbers, see ExportDashboardButton.tsx.
+ *
+ * Local `loading`/`error` state exists purely for UX feedback during the
+ * (potentially slow, multi-second) canvas render; it has no bearing on the
+ * export's correctness.
+ */
 export function ExportPdfButton({
   targetId,
   engagementName,

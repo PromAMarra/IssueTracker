@@ -3,6 +3,22 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TestedTrendPoint } from '@/lib/testPackageDashboard';
 
+/**
+ * TestedTrendChart — Testing Insights dashboard widget (client component).
+ *
+ * Line chart comparing the cumulative number of test-package steps actually
+ * tested ("Tested") against a straight-line "Target pace" (an even, linear
+ * pace from 0 to 100% of steps across the configured SIT or UAT period), for
+ * one phase at a time (`label` is "SIT" or "UAT"). Both series are
+ * precomputed by lib/testPackageDashboard.ts's `testedTrend()`; this
+ * component only renders them.
+ *
+ * `cumulativeTested` uses `connectNulls={false}` because `testedTrend()`
+ * returns `null` for any day beyond "today" — there's no data yet for days
+ * that haven't happened — so leaving those gaps unconnected keeps "Tested"
+ * from misleadingly flat-lining or extrapolating into the future, unlike
+ * "Target pace", which is a projection and is drawn across the whole period.
+ */
 function formatDate(iso: string): string {
   return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
 }

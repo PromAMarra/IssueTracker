@@ -14,6 +14,25 @@ import {
 } from 'recharts';
 import type { PackageResultBreakdown } from '@/lib/testPackageDashboard';
 
+/**
+ * PackageResultsChart — Testing Insights dashboard widget (client
+ * component).
+ *
+ * Stacked, 100%-normalized ("expand") horizontal bar chart showing each test
+ * package's step results split into Passed / Passed with minor / Failed /
+ * N/A / Not tested. The underlying counts are pre-aggregated per package by
+ * lib/testPackageDashboard.ts's `perPackageResultBreakdown()`, already
+ * resolved to whichever phase (SIT/UAT/"All"→UAT) the dashboard page's phase
+ * filter selected — this component has no phase awareness of its own and
+ * just renders whatever breakdown it's given.
+ *
+ * Because bars are shown as row-relative percentages (`stackOffset:
+ * "expand"`), the absolute step count per package would otherwise be lost;
+ * a custom `<LabelList>` (see `makeTotalLabel` below) prints each row's raw
+ * total just past the end of the bar to recover that information, and the
+ * custom tooltip (`ResultsTooltip`) breaks the percentages back out into
+ * counts.
+ */
 const RESULT_SERIES = [
   { key: 'passed', name: 'Passed', color: '#00DC78' },
   { key: 'passedWithMinor', name: 'Passed with minor', color: '#FF7D00' },
@@ -102,6 +121,9 @@ export function PackageResultsChart({ data }: { data: PackageResultBreakdown[] }
   const rowHeight = 32;
   const height = Math.max(160, data.length * rowHeight + 56);
   const lastSeries = RESULT_SERIES[RESULT_SERIES.length - 1];
+  // Memoized so Recharts sees a stable <LabelList content> component
+  // identity across renders with the same `data` — recreating the function
+  // on every render would otherwise look like a new component to Recharts.
   const totalLabel = useMemo(() => makeTotalLabel(data), [data]);
 
   return (
