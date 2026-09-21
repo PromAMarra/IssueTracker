@@ -6,6 +6,16 @@ import type { Org } from '@/lib/types';
 const COLORS: Record<Org, string> = { bank: '#00DC78', sit: '#FF7D00', prometeia: '#000D4C' };
 const LABELS: Record<Org, string> = { bank: 'Bank (UAT)', sit: 'SIT', prometeia: 'Prometeia' };
 
+/**
+ * OrgVolumeChart — Issue Insights dashboard widget (client component).
+ *
+ * Horizontal bar chart of issue counts grouped by raising org (Bank/UAT,
+ * SIT, Prometeia). Receives pre-aggregated counts from lib/kpi.ts's
+ * `orgVolume()`. The caller (the dashboard page) is responsible for
+ * filtering out the 'sit' row entirely when the engagement doesn't expect a
+ * SIT phase (`engagement.sit_expected` is false) — this component renders
+ * whatever rows it's given and has no `sit_expected` awareness itself.
+ */
 export function OrgVolumeChart({ data }: { data: { org: Org; count: number }[] }) {
   const rows = data.map((d) => ({ ...d, label: LABELS[d.org] }));
   return (

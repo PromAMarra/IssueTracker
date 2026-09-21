@@ -2,6 +2,17 @@ import type { WorkloadRow } from '@/lib/testWorkload';
 
 const PHASE_LABELS: Record<'sit' | 'uat', string> = { sit: 'SIT', uat: 'UAT' };
 
+/**
+ * WorkloadTable — Testing Insights dashboard widget.
+ *
+ * One row per execution owner per phase they own (an owner assigned both a
+ * SIT and a UAT package gets two rows), showing how many test-package steps
+ * they're responsible for, how many they've tested, and their completion
+ * percentage. All aggregation is done upstream by lib/testWorkload.ts's
+ * `computeWorkload()`, which already excludes owners with nothing assigned
+ * — this component only renders whatever rows it receives, plus an
+ * empty-state prompt when there are none at all.
+ */
 export function WorkloadTable({ rows }: { rows: WorkloadRow[] }) {
   return (
     <div className="rounded-lg border border-hairline bg-white p-4">

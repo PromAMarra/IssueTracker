@@ -4,6 +4,25 @@ import { downloadWorkbook } from '@/lib/exportXlsx';
 import type { AgingRow, DailyDefectBucket, ThroughputBucket, TimeInStatusRow, TimeToCloseRow } from '@/lib/kpi';
 import type { Org, Priority, Status } from '@/lib/types';
 
+/**
+ * ExportDashboardButton — Issue Insights dashboard action (client component).
+ *
+ * Builds an in-browser .xlsx workbook (via lib/exportXlsx.ts's
+ * `downloadWorkbook()`) from the same aggregate data already computed for
+ * the on-screen Issue Insights charts/tables, and triggers a client-side
+ * download. No network request is made — everything needed arrives as props
+ * from the server-rendered dashboard page, and the workbook is assembled and
+ * downloaded entirely in the browser.
+ *
+ * Gotcha: the "Daily Defects (SIT)"/"Daily Defects (UAT)" sheets are only
+ * included when the corresponding array is non-empty (i.e. that period is
+ * configured in Settings) — an engagement with neither period configured
+ * exports a workbook with no daily-defects sheet at all, not an empty one.
+ * Cell values are NOT sanitized here; `downloadWorkbook()` defuses
+ * formula-injection risk (a leading =, +, -, @) on every string cell before
+ * writing the workbook, since several fields here (issue titles, module
+ * names) are free-text user input.
+ */
 export function ExportDashboardButton({
   engagementName,
   statusDist,
@@ -30,6 +49,9 @@ export function ExportDashboardButton({
   uatDaily: DailyDefectBucket[];
 }) {
   async function handleExport() {
+    // Strip anything that isn't a letter/digit from the engagement name so it
+    // is always a valid filename fragment; fall back to a generic name if
+    // that leaves nothing (e.g. a name made entirely of punctuation).
     const safeName = engagementName.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'engagement';
     const dailyRows = (rows: DailyDefectBucket[]) =>
       rows.map((r) => ({ Date: r.date, 'Defects new': r.opened, 'Defects closed': r.closed, 'Current live defects': r.liveDefects }));

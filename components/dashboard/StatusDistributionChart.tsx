@@ -19,6 +19,16 @@ const LABELS: Record<Status, string> = {
   rejected: 'Rejected',
 };
 
+/**
+ * StatusDistributionChart — Issue Insights dashboard widget (client
+ * component).
+ *
+ * Vertical bar chart of issue counts by status (backlog / ongoing /
+ * ready_for_test / closed / rejected), color-coded to match the status
+ * colors used elsewhere in the app. Receives the pre-computed distribution
+ * from lib/kpi.ts's `statusDistribution()`; this component only reshapes it
+ * for Recharts and applies labels/colors.
+ */
 export function StatusDistributionChart({ distribution }: { distribution: Record<Status, number> }) {
   const data = (Object.keys(distribution) as Status[]).map((status) => ({
     status,
@@ -38,6 +48,9 @@ export function StatusDistributionChart({ distribution }: { distribution: Record
             axisLine={{ stroke: '#C3C2B7' }}
             tickLine={false}
           />
+          {/* Pad the axis top by 20% so the value label above the tallest
+              bar doesn't collide with the chart's edge; `|| 1` avoids a
+              zero-height domain when every count is 0. */}
           <YAxis
             allowDecimals={false}
             domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) || 1]}

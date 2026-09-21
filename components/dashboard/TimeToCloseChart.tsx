@@ -3,9 +3,24 @@
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TimeToCloseRow } from '@/lib/kpi';
 
+/**
+ * TimeToCloseChart — Issue Insights dashboard widget (client component).
+ *
+ * Bar chart comparing each priority's actual average time-to-close against
+ * its configured SLA target (`engagement.sla_days`), highlighting in red any
+ * priority whose average breached its target. All duration/breach math is
+ * done upstream by lib/kpi.ts's `timeToCloseByPriority()`; this component
+ * only reshapes rows for Recharts (rounding `avgDays` to one decimal,
+ * defaulting a null average to 0 for the bar's height) and picks each bar's
+ * color.
+ */
 export function TimeToCloseChart({ rows }: { rows: TimeToCloseRow[] }) {
   const data = rows.map((r) => ({
     label: r.priority.charAt(0).toUpperCase() + r.priority.slice(1),
+    // A priority with zero closed issues (avgDays === null) renders as a
+    // 0-height, non-breached (green) bar rather than being omitted — the
+    // closed-count caption below the chart is the only on-screen way to
+    // tell "0 days average" apart from "nothing closed yet".
     actual: r.avgDays !== null ? Number(r.avgDays.toFixed(1)) : 0,
     target: r.targetDays,
     breached: r.avgDays !== null && r.avgDays > r.targetDays,

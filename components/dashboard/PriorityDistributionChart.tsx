@@ -10,6 +10,16 @@ const COLORS: Record<Priority, string> = {
   low: '#F0B8A8',
 };
 
+/**
+ * PriorityDistributionChart — Issue Insights dashboard widget (client
+ * component).
+ *
+ * Vertical bar chart of issue counts by priority (critical/high/medium/low),
+ * color-coded by severity. Receives the pre-computed distribution from
+ * lib/kpi.ts's `priorityDistribution()`; this component only reshapes the
+ * `Record<Priority, number>` into an array Recharts can consume and picks
+ * each bar's color/label.
+ */
 export function PriorityDistributionChart({ distribution }: { distribution: Record<Priority, number> }) {
   const data = (Object.keys(distribution) as Priority[]).map((priority) => ({
     priority,
@@ -29,6 +39,10 @@ export function PriorityDistributionChart({ distribution }: { distribution: Reco
             axisLine={{ stroke: '#C3C2B7' }}
             tickLine={false}
           />
+          {/* Pad the axis top by 20% (Math.ceil(dataMax * 1.2)) so the
+              value label above the tallest bar doesn't collide with the
+              chart's edge; `|| 1` avoids a zero-height domain when every
+              count is 0. */}
           <YAxis
             allowDecimals={false}
             domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) || 1]}
