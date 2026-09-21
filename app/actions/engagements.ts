@@ -6,6 +6,40 @@ import { getSessionUser } from '@/lib/auth/session';
 import { keyPrefixFromBankName, sanitizeKeyPrefix } from '@/lib/keys';
 import type { SlaDays } from '@/lib/types';
 
+/**
+ * Server Actions for engagement (bank/client workspace) administration.
+ *
+ * Responsibilities:
+ * - Create and update `engagements` rows (the top-level "one per bank/client"
+ *   entity, e.g. "ADCB — UAT - ADCB") and their SLA/testing-period settings.
+ * - Upload a per-engagement bank logo to the `bank-logos` Storage bucket.
+ * - Manage `engagement_members`: add an already-registered user to an
+ *   engagement with a role (prometeia / bank / sit), and list the current
+ *   roster for a given role.
+ *
+ * How it fits in: this is the sole mutation path for engagement-level admin
+ * screens (the engagement creation wizard and the Settings page). Every
+ * exported function here is invoked directly from a Client Component via
+ * Next.js Server Actions (`'use server'` above).
+ *
+ * Security model, shared by every file in app/actions: `requireProm()` below
+ * is a JS-level, early-rejection check only (a friendlier error, one fewer
+ * round trip). It is NOT the real authorization boundary — Postgres Row-
+ * Level Security is. The mutations here run through the same ANON-key +
+ * session-cookie client (`createServerClient()`) as any other request, so
+ * the matching RLS policies (`engagements_insert_prometeia`,
+ * `engagements_update_prometeia`, `members_insert_prometeia` — all in
+ * supabase/migrations/0002_rls.sql) independently re-require
+ * `is_prometeia_user()` at the database layer. Even if this file's checks
+ * were ever removed or bypassed, the database itself still refuses the
+ * write.
+ *
+ * Critical gotcha: `engagement_members.phase` is a DB-level enum of only
+ * ('sit' | 'uat') — there is no 'bank' phase value. The UI-facing "Bank"
+ * role is stored as phase = 'uat' (see `roleToPhase` below); read that
+ * function's comment before touching any role/phase mapping.
+ */
+
 export type EngagementInput = {
   name: string;
   bankName: string;
@@ -21,12 +55,18 @@ export type EngagementInput = {
   testCasesEnabled: boolean;
 };
 
+// JS-level gate only — see the file header. The real boundary is RLS
+// (`is_prometeia_user()`), enforced independently by Postgres for every
+// insert/update this file performs.
 async function requireProm() {
   const session = await getSessionUser();
   if (!session || !session.profile.is_prometeia) throw new Error('Not authorized');
   return session;
 }
 
+// UI-facing sanity check only — there is no matching DB constraint, so a bad
+// date range is caught here before it reaches Postgres rather than being
+// rejected by it.
 function validatePeriods(input: EngagementInput) {
   if (input.sitStartDate && input.sitEndDate && input.sitStartDate > input.sitEndDate) {
     throw new Error('SIT start date must be on or before the SIT end date.');
@@ -45,6 +85,11 @@ export async function createEngagement(input: EngagementInput): Promise<string> 
     .insert({
       name: input.name,
       bank_name: input.bankName,
+      // A Prometeia admin may type a custom prefix (e.g. "ESUP"); leaving it
+      // blank falls back to one auto-derived from the bank name. Either way
+      // the result is an uppercase, alnum-only string that `next_issue_key()`
+      // (supabase/migrations/0001_schema.sql) can safely concatenate with a
+      // running sequence number to form a ticket key.
       key_prefix: input.keyPrefix.trim() ? sanitizeKeyPrefix(input.keyPrefix) : keyPrefixFromBankName(input.bankName),
       modules: input.modules,
       test_case_packages: input.testCasePackages,
@@ -140,6 +185,11 @@ export async function addMemberByEmail(
   if (!profile) {
     return { ok: false, message: `No account found for ${email} yet — ask them to sign up first.` };
   }
+  // Enforce that the account's actual role (`profiles.is_prometeia`, fixed at
+  // signup) matches the role slot it's being granted here — prevents e.g.
+  // seating a genuine Prometeia employee's account as a bank/SIT member (or
+  // vice versa), which downstream org/phase-based logic throughout the app
+  // assumes can never happen.
   if (profile.is_prometeia !== (role === 'prometeia')) {
     return {
       ok: false,
@@ -150,6 +200,10 @@ export async function addMemberByEmail(
     };
   }
 
+  // SIT is an optional phase per engagement (`engagements.sit_expected`,
+  // supabase/migrations/0016_sit_expected.sql) — refuse to seat a
+  // phase = 'sit' member on an engagement where SIT hasn't been turned on,
+  // since there is no SIT roster/board surface for them to use.
   if (role === 'sit') {
     const { data: engagement, error: engagementError } = await supabase
       .from('engagements')
@@ -166,6 +220,9 @@ export async function addMemberByEmail(
     .from('engagement_members')
     .insert({ engagement_id: engagementId, user_id: profile.id, phase: roleToPhase(role) });
   if (error) {
+    // Postgres unique_violation — `engagement_members` has a
+    // (engagement_id, user_id) uniqueness constraint; translate it into a
+    // friendly message instead of surfacing the raw DB error to the UI.
     if (error.code === '23505') return { ok: false, message: `${email} is already a member.` };
     throw error;
   }
@@ -179,6 +236,10 @@ export type Member = { userId: string; email: string; fullName: string | null };
 export async function listMembers(engagementId: string, role: MemberRole): Promise<Member[]> {
   await requireProm();
   const supabase = createServerClient();
+  // Prometeia roster is distinguished purely by `profiles.is_prometeia`;
+  // bank vs. SIT rosters are both non-Prometeia members of the very same
+  // `engagement_members` table and are further split by `phase`, via the
+  // same `roleToPhase` mapping used when adding a member above.
   let query = supabase
     .from('engagement_members')
     .select('user_id, profiles!inner(email, full_name, is_prometeia)')

@@ -16,6 +16,70 @@ import {
 import { BANK_SIT_ALLOWED_TRANSITIONS, canPostOnIssue, turnLockedMessage } from '@/lib/issueAccess';
 import type { Issue, Org, Priority, Status } from '@/lib/types';
 
+/**
+ * Server Actions for the issue/ticket lifecycle: create, transition status,
+ * reassign, reprioritize, comment, attach files, and read back full ticket
+ * detail (comments/history/attachments). This is the busiest and most
+ * security-sensitive file in app/actions — nearly every board/list/detail
+ * interaction ends up here.
+ *
+ * Status machine (see lib/types.ts's `Status` and lib/issueAccess.ts):
+ *   backlog -> ongoing -> ready_for_test -> closed
+ *                                        \-> rejected
+ * Prometeia drives the forward path (backlog -> ongoing -> ready_for_test,
+ * plus closing/reassigning/reprioritizing) via `updateIssueStatus` /
+ * `updateIssuePriority` / `updateIssueAssignee` / `updateIssueModule`, all
+ * gated by `requireProm()`. Bank/SIT members get exactly one narrow action,
+ * `confirmBankSitStatusChange`, restricted to the transitions listed in
+ * `BANK_SIT_ALLOWED_TRANSITIONS` (lib/issueAccess.ts): disputing a rejection
+ * (rejected -> ongoing) or resolving a ticket they were asked to verify
+ * (ready_for_test -> closed | rejected). A comment is required before either
+ * move — enforced by the UI flow (see IssueDetailModal), not by this file.
+ *
+ * Security model, same pattern as the rest of app/actions: `requireProm()` /
+ * `getSessionUser()` checks here are JS-level, early-rejection only. The
+ * real boundary is Postgres RLS, evaluated against the same ANON-key +
+ * session-cookie client. In particular:
+ * - `updateIssueStatus`'s Prometeia-only writes are backed by
+ *   `issues_update_prometeia` (supabase/migrations/0002_rls.sql).
+ * - `confirmBankSitStatusChange`'s narrow Bank/SIT transitions are backed by
+ *   `issues_update_bank_sit_transition` plus the
+ *   `issue_bank_sit_transition_only` trigger
+ *   (supabase/migrations/0021_bank_sit_transitions.sql), which independently
+ *   re-validates the same transition allow-list and pins every other column
+ *   back to its old value ("RLS gates rows, not columns"). Keep
+ *   `BANK_SIT_ALLOWED_TRANSITIONS` and that migration in sync if this ever
+ *   changes.
+ * - GOTCHA: `addComment` / `uploadAttachment`'s "whose turn is it"
+ *   (`canPostOnIssue`) check has NO matching RLS enforcement today — the
+ *   `comments_insert` / `attachments_insert` policies (0002_rls.sql) only
+ *   check engagement membership and `author_id = auth.uid()`, not the
+ *   ticket's current status/turn. Unlike every other rule in this file, the
+ *   comment turn-lock is enforced ONLY at this JS layer.
+ *
+ * Optimistic concurrency: every field mutation (`updateIssueStatus`,
+ * `updateIssuePriority`, `updateIssueAssignee`, `updateIssueModule`) reads
+ * the current row, then issues an `.update(...)` conditioned on the value(s)
+ * it just read still matching (e.g. `.eq('status', current.status)`), and
+ * throws `CONFLICT_MESSAGE` when zero rows matched (`.maybeSingle()`
+ * returned null). This is an application-level compare-and-swap, not a DB
+ * transaction lock — see the comment inside `updateIssueStatus` for the full
+ * rationale.
+ *
+ * Deliberate absence of `revalidatePath`: the field-mutation actions below
+ * call NO `revalidatePath` at all. See the long comment inside
+ * `updateIssueStatus` for why (Next 14.2's single, un-scoped
+ * `pathWasRevalidated` flag would force a full re-render of whichever route
+ * happened to call it, defeating the point of returning a patch for the
+ * caller's own optimistic UI update).
+ *
+ * Notification emails (`notifyByEmail` and the helpers near the bottom of
+ * this file) are always fire-and-forget, dispatched only after the
+ * underlying mutation has already committed, and are never allowed to turn a
+ * successful mutation into an error for the caller — see `notifyByEmail`'s
+ * own doc comment before touching any call site.
+ */
+
 export type CreateIssueInput = {
   engagementId: string;
   title: string;
@@ -49,10 +113,21 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     .eq('id', input.engagementId)
     .single();
   if (engagementError) throw engagementError;
+  // Defends against a stale/forged module value: only accept it if it's
+  // still one of this engagement's configured `modules`, otherwise silently
+  // drop it to null rather than erroring. The picker only ever offers valid
+  // options, so this only matters for a race (module removed mid-submit) or
+  // a manually-crafted call.
   const module = input.module && engagement.modules.includes(input.module) ? input.module : null;
 
   let testCasePackage: string | null = null;
   if (input.testCasePackage) {
+    // Two different sources of truth depending on how this engagement
+    // tracks test cases (`test_cases_enabled`, a Settings toggle): once an
+    // uploaded package exists (migration 0018), a step name is validated
+    // against real `test_package_steps` rows scoped to this engagement;
+    // otherwise it falls back to validating against the legacy free-text
+    // `test_case_packages` list stored directly on the engagement.
     if (engagement.test_cases_enabled) {
       const { count, error: stepCheckError } = await supabase
         .from('test_package_steps')
@@ -68,6 +143,11 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     }
   }
 
+  // Determine which org filed the ticket. The `is_prometeia` branch here is
+  // unreachable in practice — a Prometeia caller is already rejected at the
+  // top of this function — but it keeps `org` defined with a sane default
+  // before the membership lookup below can narrow a non-Prometeia reporter
+  // down to 'sit'.
   let org: Org = session.profile.is_prometeia ? 'prometeia' : 'bank';
   if (!session.profile.is_prometeia) {
     const { data: reporterMembership, error: membershipError } = await supabase
@@ -80,6 +160,10 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     if (reporterMembership?.phase === 'sit') org = 'sit';
   }
 
+  // Only a Prometeia member of this engagement may ever be the assignee —
+  // Bank/SIT users report tickets but never work them. An assignee id that
+  // doesn't resolve to a Prometeia engagement member is silently dropped to
+  // null rather than erroring.
   let assigneeId: string | null = null;
   if (input.assigneeId) {
     const { data: assigneeMember, error: assigneeError } = await supabase
@@ -93,6 +177,11 @@ export async function createIssue(input: CreateIssueInput): Promise<string> {
     assigneeId = assigneeMember ? assigneeMember.user_id : null;
   }
 
+  // Atomically reserves the next sequence number for this engagement's key
+  // prefix (e.g. "ESUP-13") — see `next_issue_key()` in
+  // supabase/migrations/0001_schema.sql. The increment happens inside that
+  // Postgres function, so concurrent ticket creation can't hand out the same
+  // key twice.
   const { data: keyData, error: keyError } = await supabase.rpc('next_issue_key', {
     p_engagement_id: input.engagementId,
   });
@@ -609,6 +698,9 @@ export async function addComment(issueId: string, body: string): Promise<string>
     .single();
   if (issueForAccessError) throw issueForAccessError;
   const issueStatus = issueForAccess.status as Status;
+  // Turn lock: only whichever side currently holds the ticket may post — see
+  // canPostOnIssue/issueTurnIsProm (lib/issueAccess.ts). This is a JS-only
+  // check; see this file's header comment for the RLS gap here.
   if (!canPostOnIssue(issueStatus, session.profile.is_prometeia)) {
     throw new Error(turnLockedMessage(issueStatus));
   }

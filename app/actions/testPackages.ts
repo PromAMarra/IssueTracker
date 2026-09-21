@@ -7,6 +7,49 @@ import { getSessionUser } from '@/lib/auth/session';
 import { parseTestCaseSheet } from '@/lib/testCaseImport';
 import type { TestResult } from '@/lib/types';
 
+/**
+ * Server Actions for UAT/SIT test packages: Prometeia uploads an Excel
+ * script (`uploadTestPackage`) that is parsed into `test_package_steps` rows
+ * via `lib/testCaseImport.ts`, assigns per-phase execution owners
+ * (`setTestPackageExecutionOwner`), and Bank/SIT testers record pass/fail
+ * results per step (`updateTestStepResult`). Powers the Testing Lab UI and
+ * feeds the Testing Insights dashboard (via `listTestPackagesWithResults`).
+ *
+ * Since migration 0022, SIT and UAT are tracked as two fully independent
+ * results per step (`sit_result` / `uat_result`, each with its own
+ * `..._updated_by` / `..._updated_at`) rather than one shared `result`
+ * column — SIT and UAT testers can genuinely disagree about the same step,
+ * and both opinions must be preserved. Every function below that reads or
+ * writes a step's result is phase-aware; there is no more "the" result for a
+ * step, only "SIT's" and "UAT's".
+ *
+ * Security model, same pattern as the rest of app/actions:
+ * - `requireProm()` gates package/owner management (upload, delete, set
+ *   owner). Real boundary: `test_packages_insert_prometeia` /
+ *   `test_packages_delete_prometeia` (supabase/migrations/
+ *   0018_test_case_tracking.sql) and `test_packages_update_prometeia`
+ *   (re-created in 0022, since 0018 never added an UPDATE policy for this
+ *   table).
+ * - `requireNonProm()` gates `updateTestStepResult` — this is the ONLY
+ *   Bank/SIT-exclusive write path in the entire app (every other mutation
+ *   flows the opposite way). Real boundary:
+ *   `test_package_steps_update_bank_sit` plus the `test_step_result_only`
+ *   trigger (redefined in 0022_phase_scoped_results_and_owners.sql), which
+ *   pins every column except the caller's own phase's result columns back to
+ *   their old values — "RLS gates rows, not columns" applied per-column,
+ *   keyed off the actor's own `engagement_members.phase` looked up
+ *   server-side from `auth.uid()`, never trusted from the request payload.
+ *   This Server Action re-derives that same phase independently below, but
+ *   only to target the right pair of columns — not to enforce security; the
+ *   trigger enforces that regardless of what this code sends.
+ *
+ * Optimistic concurrency: `updateTestStepResult` follows the same
+ * compare-and-swap pattern as app/actions/issues.ts's field mutations —
+ * conditioning the `.update()` on `previousResult` still matching before
+ * overwriting, and throwing a "changed since you loaded it" error if zero
+ * rows matched.
+ */
+
 async function requireProm() {
   const session = await getSessionUser();
   if (!session || !session.profile.is_prometeia) throw new Error('Not authorized');
@@ -43,6 +86,10 @@ export async function uploadTestPackage(
     .eq('id', engagementId)
     .single();
   if (engagementError) throw engagementError;
+  // This engagement must have opted into file-tracked test cases (the
+  // Settings toggle) before a package can be uploaded — otherwise issues
+  // reference test cases via the legacy free-text `test_case_packages` list
+  // instead (see app/actions/issues.ts's createIssue).
   if (!engagement.test_cases_enabled) {
     throw new Error('Turn on "Track test cases from uploaded files" in Settings before uploading a package.');
   }
@@ -52,6 +99,9 @@ export async function uploadTestPackage(
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error('Package name is required.');
 
+  // Dynamically imported so the (large) xlsx library only loads into the
+  // server bundle/cold-start path that actually needs it, not every Server
+  // Action in this file.
   const XLSX = await import('xlsx');
   const buffer = Buffer.from(await file.arrayBuffer());
   const workbook = XLSX.read(buffer, { type: 'buffer' });
@@ -162,6 +212,9 @@ export async function setTestPackageExecutionOwner(
 ): Promise<void> {
   await requireProm();
   const supabase = createServerClient();
+  // Prometeia-assigned independently per phase — a package can have a
+  // different SIT owner and UAT owner, or none, each drawn from that
+  // phase's own roster (see app/actions/engagements.ts's listMembers).
   const column = phase === 'sit' ? 'sit_execution_owner_id' : 'uat_execution_owner_id';
   const { data, error } = await supabase
     .from('test_packages')
