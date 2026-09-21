@@ -30,11 +30,12 @@ import { ExportPdfButton } from '@/components/dashboard/ExportPdfButton';
 import { listTestPackagesWithResults, type TestPackageResultStep } from '@/app/actions/testPackages';
 import { testPackageKpis } from '@/lib/testPackageKpi';
 import { perPackageResultBreakdown, testedTrend } from '@/lib/testPackageDashboard';
-import { computeWorkload } from '@/lib/testWorkload';
+import { computeWorkload, dailyTestsByOwner } from '@/lib/testWorkload';
 import { TestedTrendChart } from '@/components/dashboard/TestedTrendChart';
 import { PackageResultsChart } from '@/components/dashboard/PackageResultsChart';
 import { TestPackageFilter } from '@/components/dashboard/TestPackageFilter';
 import { WorkloadTable } from '@/components/dashboard/WorkloadTable';
+import { DailyTestsByOwnerChart } from '@/components/dashboard/DailyTestsByOwnerChart';
 
 const PHASE_ORG: Record<'sit' | 'uat', 'sit' | 'bank'> = { sit: 'sit', uat: 'bank' };
 
@@ -140,6 +141,15 @@ export default async function DashboardPage({
     testPackages.map((p) => ({ name: p.name, steps: p.steps.map(toSelectedPhaseResult) })),
   );
   const workloadRows = computeWorkload(testPackages, bankSitTeam);
+  const sitOwners = bankSitTeam.filter((m) => m.phase === 'sit' && workloadRows.some((r) => r.userId === m.id));
+  const uatOwners = bankSitTeam.filter((m) => m.phase === 'uat' && workloadRows.some((r) => r.userId === m.id));
+  const sitDailyTests =
+    sitPeriod && engagement.sit_expected
+      ? dailyTestsByOwner(testPackages, bankSitTeam, 'sit', sitPeriod.start, sitPeriod.end)
+      : [];
+  const uatDailyTests = uatPeriod
+    ? dailyTestsByOwner(testPackages, bankSitTeam, 'uat', uatPeriod.start, uatPeriod.end)
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -254,6 +264,10 @@ export default async function DashboardPage({
               )}
               <PackageResultsChart data={packageBreakdown} />
               <WorkloadTable rows={workloadRows} />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <DailyTestsByOwnerChart label="SIT" points={sitDailyTests} owners={sitOwners} />
+                <DailyTestsByOwnerChart label="UAT" points={uatDailyTests} owners={uatOwners} />
+              </div>
             </>
           )}
         </div>
