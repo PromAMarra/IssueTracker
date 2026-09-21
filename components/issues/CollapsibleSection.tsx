@@ -3,6 +3,19 @@
 import { useState, type ReactNode } from 'react';
 import { IconChevronDown, type Icon } from '@tabler/icons-react';
 
+/**
+ * Generic collapsible `<section>` with a clickable header (icon + title +
+ * chevron) used throughout `IssueDetailModal` (Attachments, Comments, Time
+ * in status, History). Not issue-specific despite living in `components/
+ * issues` — could be reused for any titled, collapsible block.
+ *
+ * `open` is the user's own toggle state; `forceOpen` is an independent,
+ * caller-driven override (see the `forceOpen` prop doc below) so a section
+ * can be pinned open by app logic (e.g. Comments while a Bank/SIT status
+ * change is pending confirmation) without permanently discarding the user's
+ * own preference — once the forcing condition clears, `open` still reflects
+ * whatever the user last chose.
+ */
 export function CollapsibleSection({
   title,
   icon: SectionIcon,

@@ -17,6 +17,27 @@ const POLL_MS = 30000;
 const TOOLBAR_BUTTON_CLASS =
   'flex h-7 w-7 items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-soft';
 
+/**
+ * Header bell icon + slide-out notification panel, rendered in `Header` for
+ * every signed-in user regardless of role. Notifications are generated
+ * server-side (e.g. on comments, status changes, assignments — see
+ * `app/actions/notifications.ts`) whenever another user acts on an issue
+ * this user cares about; this component only reads/manages them.
+ *
+ * Responsibility: polls `getUnreadNotificationCount` every `POLL_MS` for the
+ * badge count (cheap, always running), and lazily loads the full list
+ * (`listNotifications`) only when the panel is opened. Supports marking
+ * one/all read, bulk delete (with a confirm() guard — an actual permanent
+ * delete, unlike "mark read"), and clicking a notification to navigate
+ * straight to the relevant issue (`/${engagementId}/board?issue=${issueId}`,
+ * the same query-param convention `Board`/`IssueTable` use to open
+ * `IssueDetailModal`).
+ *
+ * Gotcha: errors from the count-refresh/mark-read/mark-all-read/delete calls
+ * are swallowed (see the empty catch blocks) rather than surfaced to the
+ * user — a deliberate choice to keep the bell non-intrusive, but it means
+ * e.g. a failed delete fails silently other than the list not updating.
+ */
 export function NotificationBell() {
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -39,6 +60,9 @@ export function NotificationBell() {
     return () => clearInterval(interval);
   }, []);
 
+  // `indeterminate` isn't a settable JSX/HTML attribute for checkboxes — it
+  // only exists as a DOM property — so it has to be imperatively assigned via
+  // a ref rather than passed as a prop on the <input> below.
   useEffect(() => {
     const allSelected = notifications !== null && notifications.length > 0 && selected.size === notifications.length;
     const noneSelected = selected.size === 0;

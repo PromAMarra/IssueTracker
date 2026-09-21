@@ -9,6 +9,10 @@ import type { TestCaseStepOption } from '@/app/actions/testPackages';
 
 const PRIORITIES: Priority[] = ['critical', 'high', 'medium', 'low'];
 
+// Builds the { packageName: [stepName, ...] } grouping used to render
+// <optgroup>s in the "Test case package" select when testCasesEnabled is on
+// (i.e. packages/steps come from uploaded test files rather than the
+// engagement's free-text testCasePackages list).
 function groupStepOptionsByPackage(options: TestCaseStepOption[]): Record<string, string[]> {
   const grouped: Record<string, string[]> = {};
   for (const { packageName, stepName } of options) {
@@ -17,6 +21,29 @@ function groupStepOptionsByPackage(options: TestCaseStepOption[]): Record<string
   return grouped;
 }
 
+/**
+ * "Report an issue" form, used both standalone-in-a-modal (`NewIssueModal`,
+ * from Board/List) and embedded inline (`TestPackageView`, when opening a
+ * ticket from a failed/passed-with-minor test step). Any signed-in user can
+ * report an issue except Prometeia (see the domain rule: Prometeia has full
+ * control but cannot report tickets) — this component itself does not
+ * enforce that; it's on whoever decides to render it (Board/TestPackageView
+ * gate the "Open ticket" entry points behind `!isProm` /
+ * `canEditPhase`-style checks), and ultimately on RLS for `createIssue`.
+ *
+ * Two mutually exclusive "test case package" input modes, switched on
+ * `testCasesEnabled` (an engagement-level setting): a free-text list of
+ * package names (`testCasePackages`), or packages/steps derived from
+ * uploaded test files (`testCaseStepOptions`, grouped by
+ * `groupStepOptionsByPackage`). `initialTestCasePackage` pre-fills this field
+ * when arriving from a specific failed test step in the Testing Lab.
+ *
+ * Gotcha: attachments chosen here are uploaded one-by-one, sequentially,
+ * only *after* `createIssue` succeeds and returns an id — an issue can end
+ * up created with zero attachments if any individual `uploadAttachment` call
+ * fails partway through (see `handleSubmit`), and there's no rollback of the
+ * already-created issue or already-uploaded files in that case.
+ */
 export function NewIssueForm({
   engagementId,
   modules,
@@ -68,6 +95,9 @@ export function NewIssueForm({
         assigneeId: assigneeId || null,
       });
 
+      // Intentionally sequential (not Promise.all) so uploads don't hammer
+      // Supabase Storage concurrently; each iteration awaits before starting
+      // the next, hence the lint suppression below.
       for (const file of files) {
         const formData = new FormData();
         formData.set('file', file);

@@ -3,6 +3,20 @@
 import { useState, type ChangeEvent } from 'react';
 import { uploadBankLogo } from '@/app/actions/engagements';
 
+/**
+ * File-picker control on the Settings page for uploading a bank's logo,
+ * shown next to the Prometeia logo in `Header` once set (see
+ * `current.bank_logo_url`). Scoped to one `engagementId` — each engagement
+ * has its own bank logo, unlike `PrometeiaLogoUploader` which is global.
+ *
+ * Gotcha: `preview` is set from `URL.createObjectURL(file)` (a local blob
+ * URL, not the uploaded file's real Storage URL) purely so the new logo
+ * shows immediately without waiting on a server round-trip/refresh. This
+ * object URL is never revoked and only lives for this component's lifetime;
+ * a real remote URL is picked up on the next full page load. Access control
+ * for who may upload is enforced server-side by `uploadBankLogo`/RLS on
+ * Supabase Storage, not by this component.
+ */
 export function BankLogoUploader({
   engagementId,
   currentUrl,

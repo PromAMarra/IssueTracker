@@ -10,11 +10,30 @@ import {
 } from '@/app/actions/testPackages';
 import type { PhaseTeamMember } from '@/lib/data/engagements';
 
+// Derives a default package name from the uploaded file (e.g.
+// "Onboarding.xlsx" -> "Onboarding"). `dot > 0` (not `>= 0`) deliberately
+// treats a leading-dot filename like ".xlsx" as having no extension, so it
+// isn't reduced to an empty string.
 function stripExtension(fileName: string): string {
   const dot = fileName.lastIndexOf('.');
   return dot > 0 ? fileName.slice(0, dot) : fileName;
 }
 
+/**
+ * Settings-page manager for Testing Lab test packages: upload an `.xlsx`
+ * file of test steps (parsed server-side by `uploadTestPackage`), delete a
+ * package, and assign a SIT/UAT "execution owner" per package (the person
+ * responsible for actually running that package's steps in that phase —
+ * shown in `TestPackageView` and used to compute `userOwnPhase`/
+ * `canEditPhase` there). Only meaningful/reachable when the engagement has
+ * `testCasesEnabled` on (see `EngagementConfigForm`); the SIT owner column
+ * only renders when `sitExpected` is also true.
+ *
+ * Gotcha: `bankSitTeam` mixes SIT and UAT-phase members together and this
+ * component splits them itself via `.filter((m) => m.phase === 'sit'/'uat')`
+ * — the two owner dropdowns are populated from genuinely different member
+ * lists, not the same list twice.
+ */
 export function TestPackageManager({
   engagementId,
   initialPackages,
@@ -53,6 +72,9 @@ export function TestPackageManager({
       formData.set('file', file);
       const trimmedName = name.trim();
       const { packageId, stepCount } = await uploadTestPackage(engagementId, trimmedName, formData);
+      // Optimistically prepend rather than re-fetching the full list; owners
+      // start unassigned since a package can't have an execution owner
+      // before it exists.
       setPackages((prev) => [
         {
           id: packageId,

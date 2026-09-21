@@ -3,6 +3,19 @@
 import { useState, type ChangeEvent } from 'react';
 import { uploadPrometeiaLogo } from '@/app/actions/settings';
 
+/**
+ * File-picker control for uploading the Prometeia logo shown in every
+ * `Header`/`MinimalHeader` across all engagements (a single, global setting
+ * — contrast with `BankLogoUploader`, which is per-engagement). Expected to
+ * only be reachable by Prometeia users; this component performs no role
+ * check itself — that's on the page that renders it plus RLS on
+ * `uploadPrometeiaLogo`/Storage.
+ *
+ * Gotcha: `preview` uses `URL.createObjectURL(file)` (a local blob URL) for
+ * an instant preview rather than the real uploaded URL — never revoked, and
+ * a real remote URL only shows up after a fresh page load elsewhere in the
+ * app. See `BankLogoUploader` for the same pattern.
+ */
 export function PrometeiaLogoUploader({ currentUrl }: { currentUrl: string | null }) {
   const [preview, setPreview] = useState(currentUrl);
   const [uploading, setUploading] = useState(false);

@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation';
 import { EngagementConfigForm } from './EngagementConfigForm';
 import { createEngagement } from '@/app/actions/engagements';
 
+/**
+ * Default field values for a brand-new engagement. Kept in sync with
+ * `EngagementConfigValues` in `EngagementConfigForm` — if a field is added
+ * there, it must get a sensible default here too, or this form will pass
+ * `undefined` for it to `createEngagement`.
+ */
 const EMPTY = {
   name: '',
   bankName: '',
@@ -19,6 +25,14 @@ const EMPTY = {
   testCasesEnabled: false,
 };
 
+/**
+ * "Create a new engagement" wrapper around `EngagementConfigForm`. Only
+ * reachable via `EngagementPicker`'s "+ New engagement…" option, which is
+ * itself only shown to Prometeia users — but as with the picker, that's a
+ * UX convenience, not the enforcement; `createEngagement` / RLS is what
+ * actually decides whether the current user may create an engagement.
+ * On success, navigates straight into the new engagement's Board.
+ */
 export function NewEngagementForm() {
   const router = useRouter();
   return (
