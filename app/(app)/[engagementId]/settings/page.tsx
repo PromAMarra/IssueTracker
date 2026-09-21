@@ -10,6 +10,27 @@ import { BankLogoUploader } from '@/components/settings/BankLogoUploader';
 import { PrometeiaLogoUploader } from '@/components/settings/PrometeiaLogoUploader';
 import { TestPackageManager } from '@/components/settings/TestPackageManager';
 
+/**
+ * `[engagementId]/settings` — Prometeia-only administration screen for one
+ * engagement: engagement metadata/dates (`SettingsForm`), bank/Prometeia
+ * branding logos, the three membership rosters (Prometeia/SIT/Bank via
+ * `MemberManager`, one instance per role), and test-package upload/owner
+ * assignment (`TestPackageManager`).
+ *
+ * The `is_prometeia` redirect below is a page-level convenience guard only —
+ * every write this page's children trigger (member add/remove, package
+ * upload, logo upload, engagement field edits) goes through a Server Action
+ * that re-derives authorization itself and is additionally constrained by
+ * Postgres RLS/UPDATE policies. Do not treat this redirect as the security
+ * boundary; it only prevents a Prometeia-only screen from flashing content
+ * to the wrong role before a Server Action would reject the write anyway.
+ *
+ * The SIT member manager and the whole test-package section are both
+ * conditionally rendered/fetched based on `sit_expected` /
+ * `test_cases_enabled` on the engagement — engagements that don't use SIT
+ * or don't track test cases simply don't pay for those queries or show
+ * those sections.
+ */
 export default async function SettingsPage({ params }: { params: { engagementId: string } }) {
   const session = await getSessionUser();
   if (!session) redirect('/login');
@@ -23,6 +44,10 @@ export default async function SettingsPage({ params }: { params: { engagementId:
   ]);
   if (!engagement) redirect('/');
 
+  // Each of these is skipped when the corresponding feature is off for this
+  // engagement, so a bank-only (no SIT) or issues-only (no test cases)
+  // engagement's settings page doesn't fetch or render sections that would
+  // have nothing meaningful to show.
   const sitMembers = engagement.sit_expected ? await listMembers(params.engagementId, 'sit') : [];
   const testPackages = engagement.test_cases_enabled ? await listTestPackages(params.engagementId) : [];
   const bankSitTeam = engagement.test_cases_enabled ? await listBankSitTeam(params.engagementId) : [];

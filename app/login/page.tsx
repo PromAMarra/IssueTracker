@@ -5,6 +5,19 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { retryAsync } from '@/lib/retryAsync';
 
+/**
+ * `/login` — the only public, unauthenticated entry point for existing
+ * users (paired with `/signup` for new ones). This is a client component
+ * that talks to Supabase Auth directly from the browser via
+ * `lib/supabase/client.ts`'s anon-key client, not through a Server Action —
+ * `supabase.auth.signInWithPassword` sets the session cookie itself.
+ *
+ * Critical gotcha: after a successful sign-in this does a hard
+ * `window.location.href = '/'` navigation instead of `router.push()`. That
+ * is intentional (see comment below) and must not be "optimized" to a
+ * client-side transition, or the app will intermittently show as still
+ * logged out immediately after login.
+ */
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
