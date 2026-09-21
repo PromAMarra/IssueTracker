@@ -7,6 +7,25 @@ import { Board } from '@/components/issues/Board';
 import { NewIssueModal } from '@/components/issues/NewIssueModal';
 import { IssueDetailModal } from '@/components/issues/IssueDetailModal';
 
+/**
+ * `[engagementId]/board` — the Kanban-style issue board, the default
+ * landing page inside an engagement (see `app/(app)/page.tsx`'s redirect).
+ * Prometeia users see the board read/triage-only from here; only
+ * non-Prometeia (bank/SIT) users get the "new issue" creation modal, since
+ * raising issues is a bank/SIT responsibility while Prometeia's role is to
+ * work the backlog (backlog → ongoing → ready_for_test).
+ *
+ * `listIssues()` (lib/data/issues.ts) has no role/org filter of its own —
+ * every member of the engagement gets every issue back; row-level scoping
+ * by phase/org (e.g. for the dashboard's SIT/UAT split) happens client-side
+ * in that consuming component, not here, and cross-engagement isolation is
+ * RLS's job via the `engagement_id` filter plus RLS policies, not this
+ * query's `.eq()` alone.
+ *
+ * `?issue=<id>` in the URL opens `IssueDetailModal` as an overlay on top of
+ * the board — the modal's own content is fetched independently by id, so
+ * this page does not need to look the issue up itself.
+ */
 export default async function BoardPage({
   params,
   searchParams,
@@ -27,6 +46,10 @@ export default async function BoardPage({
       ? Promise.resolve<TestCaseStepOption[]>([])
       : listTestCaseStepOptions(params.engagementId),
   ]);
+  // Same RLS-backed "null means gone-or-not-a-member" caveat as the
+  // engagement layout (see its header comment) — here it just bounces home
+  // instead of 404ing, since the layout wrapping this page already passed
+  // this same check once.
   if (!engagement) redirect('/');
 
   return (

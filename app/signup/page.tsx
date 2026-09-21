@@ -5,6 +5,17 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { retryAsync } from '@/lib/retryAsync';
 
+/**
+ * `/signup` — self-service account creation via Supabase Auth
+ * (`supabase.auth.signUp`), called directly from the browser with the anon
+ * key (see lib/supabase/client.ts). This only creates a `profiles`-linked
+ * auth user; it does NOT grant access to any engagement. A brand-new
+ * account has zero engagement memberships until a Prometeia admin adds
+ * their email to one via Settings → member management — see the
+ * post-signup messaging below, and `app/(app)/page.tsx`'s "no engagement
+ * yet" fallback, which is exactly what a user in this state lands on after
+ * confirming their email and signing in.
+ */
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');

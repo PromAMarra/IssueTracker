@@ -37,6 +37,41 @@ import { TestPackageFilter } from '@/components/dashboard/TestPackageFilter';
 import { WorkloadTable } from '@/components/dashboard/WorkloadTable';
 import { DailyTestsByOwnerChart } from '@/components/dashboard/DailyTestsByOwnerChart';
 
+/**
+ * `[engagementId]/dashboard` — the KPI/reporting screen. It renders one of
+ * two entirely different sub-dashboards depending on `?view=`:
+ *   - "issues" (default): defect KPIs (open/closed counts, reopen rate,
+ *     status/priority distributions, time-to-close, throughput, aging,
+ *     module/org volume) computed by the pure functions in `lib/kpi.ts`
+ *     from the raw issue + issue_history rows.
+ *   - "testing": test-execution KPIs (percent tested/failed, tested-vs-pace
+ *     trend, per-package pass/fail breakdown, per-owner workload and a
+ *     tests-per-day chart) computed by `lib/testPackageKpi.ts`,
+ *     `lib/testPackageDashboard.ts` and `lib/testWorkload.ts` from test
+ *     package/step rows. Only reachable when `test_cases_enabled` is on for
+ *     this engagement — the `view` variable below silently falls back to
+ *     "issues" otherwise, so a stale `?view=testing` link on a since-toggled
+ *     engagement doesn't render a broken/empty testing view.
+ *
+ * Both sub-dashboards additionally support `?phase=sit|uat` (only exposed
+ * in the UI when `sit_expected` is true for this engagement) to scope the
+ * numbers to one testing phase. This is purely a display-layer filter over
+ * data already fetched for the whole engagement — it is not a security
+ * boundary and every member can flip between phases freely.
+ *
+ * Data-fetch cost note: `allIssues`/`allHistory` are only fetched when
+ * `view === 'issues'`, and `testPackages` only when `view === 'testing'` —
+ * each view pays only for the queries its own charts need, since a single
+ * request only ever renders one of the two views.
+ *
+ * Independent-per-phase test results (critical, since migration 0022):
+ * `sit_result` and `uat_result` on a test_package_step are two separate
+ * columns with their own tester/timestamp, not one shared verdict — SIT and
+ * UAT can legitimately disagree on the same step. Every testing-view
+ * computation below has to pick one explicitly (see `toSitResult` /
+ * `toUatResult` / `toSelectedPhaseResult`); there is no single "the"
+ * result to fall back to.
+ */
 const PHASE_ORG: Record<'sit' | 'uat', 'sit' | 'bank'> = { sit: 'sit', uat: 'bank' };
 
 export default async function DashboardPage({
@@ -50,10 +85,17 @@ export default async function DashboardPage({
   if (!session) redirect('/login');
 
   const engagement = await getEngagement(params.engagementId);
+  // See board/page.tsx's header comment: null here means either "no such
+  // engagement" or "RLS denied this user" — both are handled the same way.
   if (!engagement) redirect('/');
 
+  // Falls back to "issues" whenever testing isn't enabled for this
+  // engagement, even if the URL explicitly asks for `view=testing` — see
+  // the file header for why this matters for stale/shared links.
   const view = searchParams.view === 'testing' && engagement.test_cases_enabled ? 'testing' : 'issues';
 
+  // Only fetch what the active view actually renders — avoids paying for
+  // issue/history queries on a testing-view request and vice versa below.
   const [allIssues, allHistory]: [Awaited<ReturnType<typeof listIssues>>, Awaited<ReturnType<typeof listHistoryForEngagement>>] =
     view === 'issues'
       ? await Promise.all([listIssues(params.engagementId), listHistoryForEngagement(params.engagementId)])
@@ -63,6 +105,9 @@ export default async function DashboardPage({
   // Prometeia-reported issues aren't owned by either testing phase, so they
   // stay visible regardless of which phase filter is selected.
   const issues = phase ? allIssues.filter((i) => i.org === PHASE_ORG[phase] || i.org === 'prometeia') : allIssues;
+  // Derive the id set from the already-phase-filtered issues (not from a
+  // separate query) so history rows are scoped to exactly the same set of
+  // issues the KPI tiles/charts above are computed from.
   const issueIds = new Set(issues.map((i) => i.id));
   const history = phase ? allHistory.filter((h) => issueIds.has(h.issue_id)) : allHistory;
 
@@ -76,12 +121,18 @@ export default async function DashboardPage({
   const timeToClose = timeToCloseByPriority(issues, engagement.sla_days);
   const throughput = throughputByWeek(issues, 8, now);
   const moduleVol = moduleVolume(issues);
+  // An engagement with SIT disabled should never have SIT-org issues, but
+  // strip that bucket defensively so a leftover/mis-tagged row can't make a
+  // phase the engagement doesn't use appear in the volume-by-org chart.
   const orgVol = engagement.sit_expected
     ? orgVolume(issues)
     : orgVolume(issues).filter((d) => d.org !== 'sit');
   const aging = agingReport(issues, engagement.sla_days, now);
   const timeInStatus = timeInStatusByPriority(issues, history, now);
 
+  // A period is only usable once BOTH dates are configured in Settings —
+  // a half-configured period (e.g. start set, end still blank) is treated
+  // the same as "not configured", not as an open-ended range.
   const sitPeriod =
     engagement.sit_start_date && engagement.sit_end_date
       ? { start: engagement.sit_start_date, end: engagement.sit_end_date }
@@ -141,8 +192,16 @@ export default async function DashboardPage({
     testPackages.map((p) => ({ name: p.name, steps: p.steps.map(toSelectedPhaseResult) })),
   );
   const workloadRows = computeWorkload(testPackages, bankSitTeam);
+  // Only chart owners who actually have workload rows (i.e. steps
+  // assigned/attributed to them) — a phase's full roster may include
+  // members who haven't been given execution ownership of anything yet,
+  // and they'd otherwise show up as an owner with an empty, misleading
+  // all-zero series.
   const sitOwners = bankSitTeam.filter((m) => m.phase === 'sit' && workloadRows.some((r) => r.userId === m.id));
   const uatOwners = bankSitTeam.filter((m) => m.phase === 'uat' && workloadRows.some((r) => r.userId === m.id));
+  // SIT's per-day series additionally requires sit_expected — an engagement
+  // with SIT turned off has no SIT roster/phase to attribute tests to, even
+  // if a sitPeriod date range were somehow still configured.
   const sitDailyTests =
     sitPeriod && engagement.sit_expected
       ? dailyTestsByOwner(testPackages, bankSitTeam, 'sit', sitPeriod.start, sitPeriod.end)
