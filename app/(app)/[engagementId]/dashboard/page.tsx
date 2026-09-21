@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
-import { getEngagement } from '@/lib/data/engagements';
+import { getEngagement, listBankSitTeam } from '@/lib/data/engagements';
 import { listHistoryForEngagement, listIssues } from '@/lib/data/issues';
 import {
   agingReport,
@@ -27,12 +27,14 @@ import { ModuleVolumeChart } from '@/components/dashboard/ModuleVolumeChart';
 import { OrgVolumeChart } from '@/components/dashboard/OrgVolumeChart';
 import { ExportDashboardButton } from '@/components/dashboard/ExportDashboardButton';
 import { ExportPdfButton } from '@/components/dashboard/ExportPdfButton';
-import { listTestPackagesWithResults } from '@/app/actions/testPackages';
+import { listTestPackagesWithResults, type TestPackageResultStep } from '@/app/actions/testPackages';
 import { testPackageKpis } from '@/lib/testPackageKpi';
 import { perPackageResultBreakdown, testedTrend } from '@/lib/testPackageDashboard';
+import { computeWorkload } from '@/lib/testWorkload';
 import { TestedTrendChart } from '@/components/dashboard/TestedTrendChart';
 import { PackageResultsChart } from '@/components/dashboard/PackageResultsChart';
 import { TestPackageFilter } from '@/components/dashboard/TestPackageFilter';
+import { WorkloadTable } from '@/components/dashboard/WorkloadTable';
 
 const PHASE_ORG: Record<'sit' | 'uat', 'sit' | 'bank'> = { sit: 'sit', uat: 'bank' };
 
@@ -105,7 +107,10 @@ export default async function DashboardPage({
       phase === value ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
     }`;
 
-  const testPackages = view === 'testing' ? await listTestPackagesWithResults(params.engagementId) : [];
+  const [testPackages, bankSitTeam] =
+    view === 'testing'
+      ? await Promise.all([listTestPackagesWithResults(params.engagementId), listBankSitTeam(params.engagementId)])
+      : [[], []];
   const testPackageFilter =
     searchParams.testPackage && testPackages.some((p) => p.id === searchParams.testPackage)
       ? searchParams.testPackage
@@ -113,12 +118,28 @@ export default async function DashboardPage({
   const filteredTestPackages = testPackageFilter
     ? testPackages.filter((p) => p.id === testPackageFilter)
     : testPackages;
-  const allTestSteps = filteredTestPackages.flatMap((p) => p.steps);
+
+  // sit_result and uat_result are independent testing efforts, not one
+  // shared answer — every phase-scoped view below picks one explicitly.
+  // "All" (no phase selected) falls back to UAT, this app's always-present
+  // phase, for the KPI tiles and the per-package breakdown chart; the trend
+  // charts don't need a fallback since SIT and UAT already render as two
+  // separate panels.
+  const toSitResult = (s: TestPackageResultStep) => ({ result: s.sitResult, resultUpdatedAt: s.sitResultUpdatedAt });
+  const toUatResult = (s: TestPackageResultStep) => ({ result: s.uatResult, resultUpdatedAt: s.uatResultUpdatedAt });
+  const toSelectedPhaseResult = phase === 'sit' ? toSitResult : toUatResult;
+
+  const allTestSteps = filteredTestPackages.flatMap((p) => p.steps).map(toSelectedPhaseResult);
   const testKpis = testPackageKpis(allTestSteps);
+  const sitTestSteps = filteredTestPackages.flatMap((p) => p.steps).map(toSitResult);
+  const uatTestSteps = filteredTestPackages.flatMap((p) => p.steps).map(toUatResult);
   const testSitTrend =
-    sitPeriod && engagement.sit_expected ? testedTrend(allTestSteps, sitPeriod.start, sitPeriod.end, now) : null;
-  const testUatTrend = uatPeriod ? testedTrend(allTestSteps, uatPeriod.start, uatPeriod.end, now) : null;
-  const packageBreakdown = perPackageResultBreakdown(testPackages);
+    sitPeriod && engagement.sit_expected ? testedTrend(sitTestSteps, sitPeriod.start, sitPeriod.end, now) : null;
+  const testUatTrend = uatPeriod ? testedTrend(uatTestSteps, uatPeriod.start, uatPeriod.end, now) : null;
+  const packageBreakdown = perPackageResultBreakdown(
+    testPackages.map((p) => ({ name: p.name, steps: p.steps.map(toSelectedPhaseResult) })),
+  );
+  const workloadRows = computeWorkload(testPackages, bankSitTeam);
 
   return (
     <div className="flex flex-col gap-6">
@@ -232,6 +253,7 @@ export default async function DashboardPage({
                 </div>
               )}
               <PackageResultsChart data={packageBreakdown} />
+              <WorkloadTable rows={workloadRows} />
             </>
           )}
         </div>

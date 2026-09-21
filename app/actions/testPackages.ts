@@ -25,6 +25,8 @@ export type TestPackageSummary = {
   name: string;
   stepCount: number;
   createdAt: string;
+  sitExecutionOwnerId: string | null;
+  uatExecutionOwnerId: string | null;
 };
 
 export async function uploadTestPackage(
@@ -74,7 +76,11 @@ export async function uploadTestPackage(
       step_name: step.stepName,
       step_description: step.stepDescription,
       expected_outcome: step.expectedOutcome,
-      result: step.result,
+      // A pre-filled result from the uploaded sheet is a UAT baseline — UAT
+      // is this app's always-present phase. A SIT tester, when SIT is
+      // enabled, still starts from an untested step and records their own
+      // independent result.
+      uat_result: step.result,
     })),
   );
   if (stepsError) {
@@ -126,18 +132,45 @@ export async function listTestPackages(engagementId: string): Promise<TestPackag
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('test_packages')
-    .select('id, name, created_at, test_package_steps(count)')
+    .select('id, name, created_at, sit_execution_owner_id, uat_execution_owner_id, test_package_steps(count)')
     .eq('engagement_id', engagementId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (
-    data as unknown as { id: string; name: string; created_at: string; test_package_steps: { count: number }[] }[]
+    data as unknown as {
+      id: string;
+      name: string;
+      created_at: string;
+      sit_execution_owner_id: string | null;
+      uat_execution_owner_id: string | null;
+      test_package_steps: { count: number }[];
+    }[]
   ).map((row) => ({
     id: row.id,
     name: row.name,
     stepCount: row.test_package_steps[0]?.count ?? 0,
     createdAt: row.created_at,
+    sitExecutionOwnerId: row.sit_execution_owner_id,
+    uatExecutionOwnerId: row.uat_execution_owner_id,
   }));
+}
+
+export async function setTestPackageExecutionOwner(
+  packageId: string,
+  phase: 'sit' | 'uat',
+  ownerId: string | null,
+): Promise<void> {
+  await requireProm();
+  const supabase = createServerClient();
+  const column = phase === 'sit' ? 'sit_execution_owner_id' : 'uat_execution_owner_id';
+  const { data, error } = await supabase
+    .from('test_packages')
+    .update({ [column]: ownerId })
+    .eq('id', packageId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('This test package could not be found.');
 }
 
 export type TestPackageStepDetail = {
@@ -146,12 +179,15 @@ export type TestPackageStepDetail = {
   stepName: string;
   stepDescription: string;
   expectedOutcome: string;
-  result: TestResult | null;
+  sitResult: TestResult | null;
+  uatResult: TestResult | null;
 };
 
 export type TestPackageDetail = {
   id: string;
   name: string;
+  sitExecutionOwnerId: string | null;
+  uatExecutionOwnerId: string | null;
   steps: TestPackageStepDetail[];
 };
 
@@ -162,7 +198,7 @@ export async function getTestPackageDetail(engagementId: string, packageId: stri
   const { data, error } = await supabase
     .from('test_packages')
     .select(
-      'id, name, test_package_steps(id, step_number, step_name, step_description, expected_outcome, result)',
+      'id, name, sit_execution_owner_id, uat_execution_owner_id, test_package_steps(id, step_number, step_name, step_description, expected_outcome, sit_result, uat_result)',
     )
     .eq('id', packageId)
     .eq('engagement_id', engagementId)
@@ -172,13 +208,16 @@ export async function getTestPackageDetail(engagementId: string, packageId: stri
   const row = data as unknown as {
     id: string;
     name: string;
+    sit_execution_owner_id: string | null;
+    uat_execution_owner_id: string | null;
     test_package_steps: {
       id: string;
       step_number: number;
       step_name: string;
       step_description: string;
       expected_outcome: string;
-      result: TestResult | null;
+      sit_result: TestResult | null;
+      uat_result: TestResult | null;
     }[];
   };
   const steps = [...row.test_package_steps]
@@ -189,9 +228,16 @@ export async function getTestPackageDetail(engagementId: string, packageId: stri
       stepName: s.step_name,
       stepDescription: s.step_description,
       expectedOutcome: s.expected_outcome,
-      result: s.result,
+      sitResult: s.sit_result,
+      uatResult: s.uat_result,
     }));
-  return { id: row.id, name: row.name, steps };
+  return {
+    id: row.id,
+    name: row.name,
+    sitExecutionOwnerId: row.sit_execution_owner_id,
+    uatExecutionOwnerId: row.uat_execution_owner_id,
+    steps,
+  };
 }
 
 export async function updateTestStepResult(
@@ -201,15 +247,42 @@ export async function updateTestStepResult(
 ): Promise<void> {
   const session = await requireNonProm();
   const supabase = createServerClient();
+
+  const { data: stepRow, error: stepError } = await supabase
+    .from('test_package_steps')
+    .select('test_packages!inner(engagement_id)')
+    .eq('id', stepId)
+    .single();
+  if (stepError) throw stepError;
+  const engagementId = (stepRow as unknown as { test_packages: { engagement_id: string } }).test_packages
+    .engagement_id;
+
+  // Which of this step's two result columns the actor may touch, based on
+  // their own membership phase — mirrored (and re-derived independently,
+  // not trusted from here) by the test_step_result_only trigger, which pins
+  // the other phase's columns back to their old values regardless of what
+  // this update's payload contains.
+  const { data: membership, error: membershipError } = await supabase
+    .from('engagement_members')
+    .select('phase')
+    .eq('engagement_id', engagementId)
+    .eq('user_id', session.id)
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+  const isSit = membership?.phase === 'sit';
+  const resultColumn = isSit ? 'sit_result' : 'uat_result';
+  const updatedByColumn = isSit ? 'sit_result_updated_by' : 'uat_result_updated_by';
+  const updatedAtColumn = isSit ? 'sit_result_updated_at' : 'uat_result_updated_at';
+
   // Optimistic-concurrency guard — see updateIssuePriority in app/actions/issues.ts
   // for the same pattern. Without conditioning on the result the caller last saw,
   // two testers submitting different results for the same step in a short window
   // would silently overwrite each other with no error to either side.
   let query = supabase
     .from('test_package_steps')
-    .update({ result, result_updated_by: session.id, result_updated_at: new Date().toISOString() })
+    .update({ [resultColumn]: result, [updatedByColumn]: session.id, [updatedAtColumn]: new Date().toISOString() })
     .eq('id', stepId);
-  query = previousResult === null ? query.is('result', null) : query.eq('result', previousResult);
+  query = previousResult === null ? query.is(resultColumn, null) : query.eq(resultColumn, previousResult);
   const { data, error } = await query.select('id').maybeSingle();
   if (error) throw error;
   if (!data) {
@@ -238,19 +311,35 @@ export async function listTestCaseStepOptions(engagementId: string): Promise<Tes
   );
 }
 
+export type TestPackageResultStep = {
+  sitResult: TestResult | null;
+  sitResultUpdatedAt: string | null;
+  uatResult: TestResult | null;
+  uatResultUpdatedAt: string | null;
+};
+
 export type TestPackageWithResults = {
   id: string;
   name: string;
-  steps: { result: TestResult | null; resultUpdatedAt: string | null }[];
+  sitExecutionOwnerId: string | null;
+  uatExecutionOwnerId: string | null;
+  steps: TestPackageResultStep[];
 };
 
+// Returns both phases' results for every step, unfiltered — callers (the
+// dashboard) pick out sitResult or uatResult per their own selected phase
+// when feeding lib/testPackageKpi.ts / lib/testPackageDashboard.ts (which
+// only know about a single generic `result` field), and the raw per-owner
+// data is also what the workload view is computed from.
 export async function listTestPackagesWithResults(engagementId: string): Promise<TestPackageWithResults[]> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('test_packages')
-    .select('id, name, test_package_steps(result, result_updated_at)')
+    .select(
+      'id, name, sit_execution_owner_id, uat_execution_owner_id, test_package_steps(sit_result, sit_result_updated_at, uat_result, uat_result_updated_at)',
+    )
     .eq('engagement_id', engagementId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -258,11 +347,25 @@ export async function listTestPackagesWithResults(engagementId: string): Promise
     data as unknown as {
       id: string;
       name: string;
-      test_package_steps: { result: TestResult | null; result_updated_at: string | null }[];
+      sit_execution_owner_id: string | null;
+      uat_execution_owner_id: string | null;
+      test_package_steps: {
+        sit_result: TestResult | null;
+        sit_result_updated_at: string | null;
+        uat_result: TestResult | null;
+        uat_result_updated_at: string | null;
+      }[];
     }[]
   ).map((pkg) => ({
     id: pkg.id,
     name: pkg.name,
-    steps: pkg.test_package_steps.map((s) => ({ result: s.result, resultUpdatedAt: s.result_updated_at })),
+    sitExecutionOwnerId: pkg.sit_execution_owner_id,
+    uatExecutionOwnerId: pkg.uat_execution_owner_id,
+    steps: pkg.test_package_steps.map((s) => ({
+      sitResult: s.sit_result,
+      sitResultUpdatedAt: s.sit_result_updated_at,
+      uatResult: s.uat_result,
+      uatResultUpdatedAt: s.uat_result_updated_at,
+    })),
   }));
 }

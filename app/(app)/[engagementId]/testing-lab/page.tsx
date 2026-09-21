@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getEngagement, listPrometeiaTeam } from '@/lib/data/engagements';
+import { getEngagement, getOwnPhase, listBankSitTeam, listPrometeiaTeam } from '@/lib/data/engagements';
 import { getTestPackageDetail, listTestCaseStepOptions, listTestPackageNames } from '@/app/actions/testPackages';
 import { TestPackageView } from '@/components/testinglab/TestPackageView';
 
@@ -18,10 +18,12 @@ export default async function TestingLabPage({
   if (!engagement) redirect('/');
   if (!engagement.test_cases_enabled) redirect(`/${params.engagementId}/board`);
 
-  const [packages, teamMembers, testCaseStepOptions] = await Promise.all([
+  const [packages, teamMembers, testCaseStepOptions, bankSitTeam, userOwnPhase] = await Promise.all([
     listTestPackageNames(params.engagementId),
     listPrometeiaTeam(params.engagementId),
     listTestCaseStepOptions(params.engagementId),
+    listBankSitTeam(params.engagementId),
+    session.profile.is_prometeia ? Promise.resolve(null) : getOwnPhase(params.engagementId, session.id),
   ]);
 
   if (packages.length === 0) {
@@ -40,6 +42,7 @@ export default async function TestingLabPage({
       : packages[0].id;
 
   const detail = await getTestPackageDetail(params.engagementId, activePackageId);
+  const ownerName = (id: string | null) => bankSitTeam.find((m) => m.id === id)?.name ?? null;
 
   return (
     <TestPackageView
@@ -51,6 +54,10 @@ export default async function TestingLabPage({
       teamMembers={teamMembers}
       testCasesEnabled={engagement.test_cases_enabled}
       testCaseStepOptions={testCaseStepOptions}
+      sitExpected={engagement.sit_expected}
+      userOwnPhase={userOwnPhase}
+      sitExecutionOwnerName={ownerName(detail.sitExecutionOwnerId)}
+      uatExecutionOwnerName={ownerName(detail.uatExecutionOwnerId)}
     />
   );
 }

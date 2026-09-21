@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getEngagement } from '@/lib/data/engagements';
+import { getEngagement, listBankSitTeam } from '@/lib/data/engagements';
 import { getPlatformSettings } from '@/lib/data/settings';
 import { listMembers } from '@/app/actions/engagements';
 import { listTestPackages } from '@/app/actions/testPackages';
@@ -25,6 +25,7 @@ export default async function SettingsPage({ params }: { params: { engagementId:
 
   const sitMembers = engagement.sit_expected ? await listMembers(params.engagementId, 'sit') : [];
   const testPackages = engagement.test_cases_enabled ? await listTestPackages(params.engagementId) : [];
+  const bankSitTeam = engagement.test_cases_enabled ? await listBankSitTeam(params.engagementId) : [];
 
   return (
     <div className="flex flex-col gap-10">
@@ -69,7 +70,12 @@ export default async function SettingsPage({ params }: { params: { engagementId:
       </section>
       {engagement.test_cases_enabled && (
         <section>
-          <TestPackageManager engagementId={params.engagementId} initialPackages={testPackages} />
+          <TestPackageManager
+            engagementId={params.engagementId}
+            initialPackages={testPackages}
+            sitExpected={engagement.sit_expected}
+            bankSitTeam={bankSitTeam}
+          />
         </section>
       )}
     </div>

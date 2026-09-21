@@ -15,6 +15,8 @@ import { TEST_RESULTS, TEST_RESULT_LABELS, type TestResult } from '@/lib/types';
 import type { TeamMember } from '@/lib/data/engagements';
 import { ResultBadge } from './ResultBadge';
 
+type Phase = 'sit' | 'uat';
+
 export function TestPackageView({
   engagementId,
   detail,
@@ -23,6 +25,10 @@ export function TestPackageView({
   teamMembers,
   testCasesEnabled,
   testCaseStepOptions,
+  sitExpected,
+  userOwnPhase,
+  sitExecutionOwnerName,
+  uatExecutionOwnerName,
 }: {
   engagementId: string;
   detail: TestPackageDetail;
@@ -31,9 +37,14 @@ export function TestPackageView({
   teamMembers: TeamMember[];
   testCasesEnabled: boolean;
   testCaseStepOptions: TestCaseStepOption[];
+  sitExpected: boolean;
+  userOwnPhase: Phase | null;
+  sitExecutionOwnerName: string | null;
+  uatExecutionOwnerName: string | null;
 }) {
   const router = useRouter();
   const [steps, setSteps] = useState(detail.steps);
+  const [phase, setPhase] = useState<Phase>(sitExpected && userOwnPhase === 'sit' ? 'sit' : 'uat');
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticketStepName, setTicketStepName] = useState<string | null>(null);
@@ -58,17 +69,24 @@ export function TestPackageView({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [router]);
 
-  const kpis = testPackageKpis(steps);
+  // Only the phase's own steps feed the KPI tiles — sit_result and
+  // uat_result are independent testing efforts, not one shared answer.
+  const phaseSteps = steps.map((s) => ({ result: phase === 'sit' ? s.sitResult : s.uatResult }));
+  const kpis = testPackageKpis(phaseSteps);
+  const canEditPhase = !isProm && phase === userOwnPhase;
+  const executionOwnerName = phase === 'sit' ? sitExecutionOwnerName : uatExecutionOwnerName;
 
   async function handleResultChange(stepId: string, result: TestResult | null) {
-    const previousResult = steps.find((s) => s.id === stepId)?.result ?? null;
+    const step = steps.find((s) => s.id === stepId);
+    const previousResult = (phase === 'sit' ? step?.sitResult : step?.uatResult) ?? null;
+    const field = phase === 'sit' ? 'sitResult' : 'uatResult';
     setPendingId(stepId);
     setError(null);
-    setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result } : s)));
+    setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, [field]: result } : s)));
     try {
       await updateTestStepResult(stepId, result, previousResult);
     } catch (err) {
-      setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, result: previousResult } : s)));
+      setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, [field]: previousResult } : s)));
       setError(err instanceof Error ? err.message : 'Could not save this result.');
     } finally {
       setPendingId(null);
@@ -77,6 +95,36 @@ export function TestPackageView({
 
   return (
     <div className="flex flex-col gap-4">
+      {sitExpected && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setPhase('sit')}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                phase === 'sit' ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
+              }`}
+            >
+              SIT
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhase('uat')}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                phase === 'uat' ? 'bg-brand-blue text-white' : 'border border-ink-soft/30 text-ink hover:bg-primary-soft'
+              }`}
+            >
+              UAT
+            </button>
+          </div>
+          {executionOwnerName && (
+            <span className="text-xs text-ink-soft">
+              {phase === 'sit' ? 'SIT' : 'UAT'} execution owner: <span className="font-medium text-ink">{executionOwnerName}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile label="Total tests" value={String(kpis.total)} />
         <StatTile label="% tested" value={`${kpis.testedPercent}%`} />
@@ -101,46 +149,49 @@ export function TestPackageView({
             </tr>
           </thead>
           <tbody>
-            {steps.map((step) => (
-              <tr key={step.id} className="border-b border-hairline/60 align-top">
-                <td className="px-3 py-2 font-mono text-ink-soft">{step.stepNumber}</td>
-                <td className="px-3 py-2 font-medium text-ink">{step.stepName}</td>
-                <td className="max-w-md whitespace-pre-wrap px-3 py-2 text-ink-soft">{step.stepDescription}</td>
-                <td className="max-w-xs whitespace-pre-wrap px-3 py-2 text-ink-soft">{step.expectedOutcome}</td>
-                <td className="px-3 py-2">
-                  {isProm ? (
-                    <ResultBadge result={step.result} />
-                  ) : (
-                    <select
-                      value={step.result ?? ''}
-                      disabled={pendingId === step.id}
-                      onChange={(e) => handleResultChange(step.id, (e.target.value || null) as TestResult | null)}
-                      aria-label={`Result for ${step.stepName}`}
-                      className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
-                    >
-                      <option value="">Not tested</option>
-                      {TEST_RESULTS.map((r) => (
-                        <option key={r} value={r}>
-                          {TEST_RESULT_LABELS[r]}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {(step.result === 'failed' || step.result === 'passed_with_minor') && (
-                    <button
-                      type="button"
-                      onClick={() => setTicketStepName(step.stepName)}
-                      className="flex items-center gap-1 whitespace-nowrap rounded-md bg-brand-blue px-2 py-1 text-xs font-bold text-white hover:bg-primary-active"
-                    >
-                      <IconPlus className="h-3.5 w-3.5" stroke={1.5} />
-                      Open ticket
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {steps.map((step) => {
+              const result = phase === 'sit' ? step.sitResult : step.uatResult;
+              return (
+                <tr key={step.id} className="border-b border-hairline/60 align-top">
+                  <td className="px-3 py-2 font-mono text-ink-soft">{step.stepNumber}</td>
+                  <td className="px-3 py-2 font-medium text-ink">{step.stepName}</td>
+                  <td className="max-w-md whitespace-pre-wrap px-3 py-2 text-ink-soft">{step.stepDescription}</td>
+                  <td className="max-w-xs whitespace-pre-wrap px-3 py-2 text-ink-soft">{step.expectedOutcome}</td>
+                  <td className="px-3 py-2">
+                    {canEditPhase ? (
+                      <select
+                        value={result ?? ''}
+                        disabled={pendingId === step.id}
+                        onChange={(e) => handleResultChange(step.id, (e.target.value || null) as TestResult | null)}
+                        aria-label={`Result for ${step.stepName}`}
+                        className="rounded-md border border-ink-soft/30 px-2 py-1 text-xs font-normal"
+                      >
+                        <option value="">Not tested</option>
+                        {TEST_RESULTS.map((r) => (
+                          <option key={r} value={r}>
+                            {TEST_RESULT_LABELS[r]}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <ResultBadge result={result} />
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {canEditPhase && (result === 'failed' || result === 'passed_with_minor') && (
+                      <button
+                        type="button"
+                        onClick={() => setTicketStepName(step.stepName)}
+                        className="flex items-center gap-1 whitespace-nowrap rounded-md bg-brand-blue px-2 py-1 text-xs font-bold text-white hover:bg-primary-active"
+                      >
+                        <IconPlus className="h-3.5 w-3.5" stroke={1.5} />
+                        Open ticket
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
