@@ -1,5 +1,17 @@
 import type { TestResult } from './types';
 
+/**
+ * Computes the small set of top-line KPI tiles (total/tested/failed/to-be-
+ * tested counts and percentages) shown for a test package or for the whole
+ * Testing Insights dashboard view. Consumed by
+ * app/(app)/[engagementId]/dashboard/page.tsx and
+ * components/testinglab/TestPackageView.tsx.
+ *
+ * Like lib/testPackageDashboard.ts, this is phase-agnostic: callers must
+ * already have picked one phase's `result` per step (SIT or UAT — see
+ * migration 0022's independent `sit_result`/`uat_result` columns) before
+ * calling `testPackageKpis`; this function has no notion of phase itself.
+ */
 export type TestPackageKpis = {
   total: number;
   testedCount: number;

@@ -1,5 +1,33 @@
 import type { Status } from './types';
 
+/**
+ * Client/server-side (JS-level) authorization helpers for the issue lifecycle
+ * state machine described by `Status` (lib/types.ts): backlog -> ongoing ->
+ * ready_for_test -> closed, with `rejected` as a side branch back to ongoing.
+ *
+ * This module answers two related but separate questions:
+ *   1. "Whose turn is it?" — issueTurnIsProm / canPostOnIssue / turnLockedMessage.
+ *      The Board alternates "possession" of a ticket between Prometeia and
+ *      Bank/SIT; only the side currently holding it may add comments or
+ *      attachments. Used by app/actions/issues.ts to gate comment/attachment
+ *      writes and by the UI to disable the comment form with an explanatory
+ *      message.
+ *   2. "What status changes can Bank/SIT make directly?" —
+ *      BANK_SIT_ALLOWED_TRANSITIONS. A deliberately narrow allowlist: Bank/SIT
+ *      users may only dispute a rejection (rejected -> ongoing) or resolve a
+ *      fix Prometeia marked ready (ready_for_test -> closed | rejected).
+ *
+ * CRITICAL / gotcha for anyone touching this file: everything here is a
+ * convenience for the UI (early rejection, building dropdown options,
+ * friendly error text) — it is NOT the real security boundary. All Server
+ * Actions run with the Supabase ANON key plus the caller's session cookies,
+ * so Postgres Row-Level Security is the actual authorization boundary. The
+ * RLS policy + trigger in supabase/migrations/0021_bank_sit_transitions.sql
+ * independently re-implements the same narrowing at the database layer. If
+ * you change BANK_SIT_ALLOWED_TRANSITIONS here, you MUST update that
+ * migration to match, or the UI and the database will disagree about which
+ * transitions a Bank/SIT user may perform.
+ */
 /** Which side currently owns the ticket and may post to it, based on status. */
 export function issueTurnIsProm(status: Status): boolean {
   return status === 'backlog' || status === 'ongoing';

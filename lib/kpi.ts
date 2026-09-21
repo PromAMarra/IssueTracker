@@ -1,6 +1,30 @@
 import { PRIORITIES, STATUSES } from './types';
 import type { Issue, IssueHistoryEntry, Priority, SlaDays, Status } from './types';
 
+/**
+ * Pure, framework-free analytics functions backing the "Issue Insights" half
+ * of the engagement dashboard (app/(app)/[engagementId]/dashboard/page.tsx).
+ * Every function here takes already-fetched data (issues, history entries,
+ * an SLA config, a reference "now") as plain arguments and returns plain
+ * data — no Supabase calls, no React, no dates mutated in place beyond a
+ * function's own local scratch variables. This makes them trivially unit
+ * testable (see kpi.test.ts) and safe to call both on the server (page.tsx,
+ * for the initial render) and, if ever needed, in the browser.
+ *
+ * Gotchas for a new engineer:
+ *  - "Days" are computed as raw (end - start) / 86_400_000, i.e. fractional
+ *    calendar days based on wall-clock timestamps, not business days and not
+ *    rounded — two SLA breaches 0.01 days apart are treated as materially
+ *    different only insofar as averages/medians reflect that.
+ *  - `now` is always passed in by the caller (never `new Date()` internally)
+ *    so every function here is deterministic and testable; callers must be
+ *    careful to pass one consistent `now` across a whole dashboard render.
+ *  - History-derived functions (statusDurations, reopenFromReadyForTestCount,
+ *    timeInStatusByPriority, reopenRate) depend on issue_history rows having
+ *    been written correctly by the mutating Server Actions in
+ *    app/actions/issues.ts; a gap or malformed history row silently skews
+ *    these metrics rather than throwing.
+ */
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function daysBetween(startIso: string, endIso: string): number {
@@ -30,6 +54,9 @@ export function moduleVolume(issues: Issue[]): { module: string; count: number }
     .sort((a, b) => b.count - a.count);
 }
 
+// Fixed bank/sit/prometeia order (rather than sorted by count, like
+// moduleVolume) so the chart's legend/series order never reshuffles as the
+// underlying counts change.
 export function orgVolume(issues: Issue[]): { org: Issue['org']; count: number }[] {
   const bank = issues.filter((i) => i.org === 'bank').length;
   const sit = issues.filter((i) => i.org === 'sit').length;

@@ -1,5 +1,22 @@
 import type { TestResult } from './types';
 
+/**
+ * Pure analytics functions for the "who owns what" side of Testing Insights:
+ * per-owner workload (assigned/tested/remaining step counts) and a
+ * per-owner, per-day tested-steps series for the tests-per-day chart. Feeds
+ * app/(app)/[engagementId]/dashboard/page.tsx and
+ * components/dashboard/WorkloadTable.tsx / DailyTestsByOwnerChart.tsx.
+ *
+ * Ownership model: `test_packages.sit_execution_owner_id` and
+ * `uat_execution_owner_id` are independent, Prometeia-assigned fields — one
+ * package can have a different owner per phase (or none). A `WorkloadMember`
+ * is scoped to exactly one phase (`engagement_members.phase`), reflecting
+ * that a Bank/SIT user's phase is fixed for an engagement (see
+ * lib/issueAccess.ts's header for how `phase` fits into the wider access
+ * model); this module never needs to reconcile a member appearing as both a
+ * SIT and a UAT owner because the caller is expected to pass in members
+ * already filtered/tagged by their one phase.
+ */
 export type WorkloadStep = {
   sitResult: TestResult | null;
   sitResultUpdatedAt?: string | null;
