@@ -337,22 +337,18 @@ export async function updateIssueStatus(issueId: string, newStatus: Status): Pro
 // make (see requireProm() above, which gates every other mutation in this
 // file): disputing a rejection sends it back to Prometeia, and resolving a
 // Ready For Test ticket themselves — Closed if the fix works, Rejected if it
-// doesn't — per BANK_SIT_ALLOWED_TRANSITIONS (lib/issueAccess.ts). Every one
-// of these requires a note explaining why, recorded as a normal comment. The
-// RLS policy and trigger in 0021_bank_sit_transitions.sql enforce the same
+// doesn't — per BANK_SIT_ALLOWED_TRANSITIONS (lib/issueAccess.ts). The UI
+// requires the actor to post a comment explaining why FIRST (reusing the
+// existing comment form rather than a separate note field — see
+// IssueDetailModal's handleComment) and only calls this once that comment has
+// already been saved; this action does the status transition alone. The RLS
+// policy and trigger in 0021_bank_sit_transitions.sql enforce the same
 // narrowing at the DB layer — this check is defense in depth, not the real
 // gate.
-export async function changeStatusWithNote(
-  issueId: string,
-  newStatus: Status,
-  note: string,
-): Promise<MutationResult> {
+export async function confirmBankSitStatusChange(issueId: string, newStatus: Status): Promise<MutationResult> {
   const session = await getSessionUser();
   if (!session) throw new Error('Not authenticated');
   if (session.profile.is_prometeia) throw new Error('Not authorized');
-
-  const trimmedNote = note.trim();
-  if (!trimmedNote) throw new Error("Please explain why you're changing this ticket's status.");
 
   const supabase = createServerClient();
   const { data: current, error: fetchError } = await supabase
@@ -367,14 +363,6 @@ export async function changeStatusWithNote(
   if (!allowed.includes(newStatus)) {
     throw new Error('This status change is not allowed.');
   }
-
-  // Post the note as a normal comment BEFORE changing the status: comment
-  // posting is gated by whose "turn" it is (canPostOnIssue), and both
-  // 'rejected' and 'ready_for_test' are currently Bank/SIT's turn — but the
-  // status this action sets next ('ongoing' for a dispute) is Prometeia's
-  // turn, which would otherwise lock the actor out of posting their own
-  // explanation a moment too late.
-  await addComment(issueId, trimmedNote);
 
   const isClosing = newStatus === 'closed';
   const patch: Record<string, unknown> = {

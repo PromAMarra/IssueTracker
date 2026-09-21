@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { IconClock, IconHistory, IconMessage, IconPaperclip, IconX } from '@tabler/icons-react';
 import {
   addComment,
-  changeStatusWithNote,
+  confirmBankSitStatusChange,
   getIssueDetail,
   updateIssueAssignee,
   updateIssueModule,
@@ -61,7 +61,6 @@ export function IssueDetailModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingStatus, setPendingStatus] = useState<Status | null>(null);
-  const [statusNote, setStatusNote] = useState('');
 
   async function reload() {
     try {
@@ -76,7 +75,6 @@ export function IssueDetailModal({
   useEffect(() => {
     reload();
     setPendingStatus(null);
-    setStatusNote('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issueId]);
 
@@ -115,29 +113,23 @@ export function IssueDetailModal({
         await uploadAttachment(issueId, engagementId, formData, newCommentId);
       }
 
+      // A pending Bank/SIT status change rides on this same comment — the
+      // comment IS the required note, rather than a separate field — and is
+      // only confirmed once the comment has actually saved. Post it before
+      // changing the status: posting is gated by whose "turn" it is, and the
+      // status this can move to (e.g. Ongoing, on a dispute) is Prometeia's
+      // turn, which would otherwise lock the actor out a moment too late.
+      if (pendingStatus) {
+        await confirmBankSitStatusChange(issueId, pendingStatus);
+        setPendingStatus(null);
+      }
+
       setCommentBody('');
       setCommentFiles([]);
       if (commentFileInputRef.current) commentFileInputRef.current.value = '';
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add your comment.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitStatusChange(e: FormEvent) {
-    e.preventDefault();
-    if (!pendingStatus || !statusNote.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await changeStatusWithNote(issueId, pendingStatus, statusNote.trim());
-      setPendingStatus(null);
-      setStatusNote('');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save this change.');
     } finally {
       setBusy(false);
     }
@@ -289,12 +281,14 @@ export function IssueDetailModal({
                 <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
                   Status
                   <select
-                    value={pendingStatus ?? issue.status}
+                    value={pendingStatus ?? ''}
                     disabled={busy}
                     onChange={(e) => setPendingStatus(e.target.value as Status)}
                     className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal"
                   >
-                    <option value={issue.status}>{STATUS_LABELS[issue.status]}</option>
+                    <option value="" disabled>
+                      Change to…
+                    </option>
                     {BANK_SIT_ALLOWED_TRANSITIONS[issue.status]!.map((s) => (
                       <option key={s} value={s}>
                         {STATUS_LABELS[s]}
@@ -309,43 +303,22 @@ export function IssueDetailModal({
               {issue.module && <span className="text-xs text-ink-soft">{issue.module}</span>}
               {assigneeName && <span className="text-xs text-ink-soft">Assigned: {assigneeName}</span>}
             </div>
-            {pendingStatus && pendingStatus !== issue.status && (
-              <form
-                onSubmit={submitStatusChange}
-                className="flex flex-col gap-2 rounded-md border border-ink-soft/20 bg-brand-gray-light p-3"
-              >
-                <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
-                  Note explaining this change (required)
-                  <textarea
-                    required
-                    autoFocus
-                    value={statusNote}
-                    onChange={(e) => setStatusNote(e.target.value)}
-                    rows={2}
-                    className="rounded-md border border-ink-soft/30 px-2 py-1 text-sm font-normal text-ink"
-                  />
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={busy || !statusNote.trim()}
-                    className="rounded-md bg-brand-blue px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-active disabled:opacity-60"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      setPendingStatus(null);
-                      setStatusNote('');
-                    }}
-                    className="rounded-md border border-ink-soft/30 px-3 py-1.5 text-xs font-medium text-ink hover:bg-primary-soft disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+            {pendingStatus && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-ink-soft/20 bg-brand-gray-light p-3 text-xs text-ink-soft">
+                <span>
+                  Add a comment below explaining why you&rsquo;re changing this to{' '}
+                  <span className="font-semibold text-ink">{STATUS_LABELS[pendingStatus]}</span>, then send it to
+                  confirm.
+                </span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setPendingStatus(null)}
+                  className="ml-auto rounded-md border border-ink-soft/30 px-2 py-1 font-medium text-ink hover:bg-primary-soft disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -364,7 +337,7 @@ export function IssueDetailModal({
           <p className="text-xs text-ink-soft">Attachments can only be added when a ticket is first reported.</p>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Comments" icon={IconMessage} defaultOpen={false}>
+        <CollapsibleSection title="Comments" icon={IconMessage} defaultOpen={false} forceOpen={pendingStatus !== null}>
           <ul className="mb-3 flex flex-col gap-2">
             {comments.map((c) => (
               <li
@@ -423,16 +396,16 @@ export function IssueDetailModal({
               <input
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
-                placeholder="Add a comment"
+                placeholder={pendingStatus ? `Explain why you're changing this to ${STATUS_LABELS[pendingStatus]}` : 'Add a comment'}
                 disabled={!canPost}
                 className="flex-1 rounded-md border border-ink-soft/30 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={busy || !canPost}
+                disabled={busy || !canPost || (pendingStatus !== null && !commentBody.trim())}
                 className="rounded-md bg-brand-blue px-3 py-2 text-sm font-bold text-white hover:bg-primary-active disabled:opacity-60"
               >
-                Send
+                {pendingStatus ? 'Send & confirm' : 'Send'}
               </button>
             </div>
             <label className="flex flex-col gap-1 text-xs font-semibold text-ink-soft">
