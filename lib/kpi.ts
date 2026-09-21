@@ -188,14 +188,18 @@ export function statusDurations(issue: Issue, history: StatusHistoryEvent[], now
 
 export type StatusTransitionEvent = { field: string; fromValue: string | null; toValue: string };
 
-// How many times this ticket was sent back to active work after Prometeia
-// had marked it Ready for Test — i.e. the bank tested it, it wasn't actually
-// fixed, and it bounced back rather than being closed. Only counts leaving
-// Ready for Test for Ongoing or Backlog, not the success paths (Closed/
-// Rejected).
+// How many times this ticket was sent back after Prometeia had marked it
+// Ready for Test — either to active work, or handed back as Rejected by
+// Bank/SIT's own "this isn't actually fixed" verdict (confirmBankSitStatusChange
+// in app/actions/issues.ts) — rather than being closed as verified. Counts
+// leaving Ready for Test for Ongoing, Backlog, or Rejected; only Closed is
+// the success path.
 export function reopenFromReadyForTestCount(history: StatusTransitionEvent[]): number {
   return history.filter(
-    (h) => h.field === 'status' && h.fromValue === 'ready_for_test' && (h.toValue === 'ongoing' || h.toValue === 'backlog'),
+    (h) =>
+      h.field === 'status' &&
+      h.fromValue === 'ready_for_test' &&
+      (h.toValue === 'ongoing' || h.toValue === 'backlog' || h.toValue === 'rejected'),
   ).length;
 }
 

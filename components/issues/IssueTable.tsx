@@ -286,7 +286,7 @@ export function IssueTable({
                   Time in {STATUS_LABELS[s]}
                 </th>
               ))}
-              <th className="whitespace-nowrap px-3 py-2" title="Times sent back to Ongoing/Backlog after Prometeia marked it Ready for Test">
+              <th className="whitespace-nowrap px-3 py-2" title="Times sent back to Ongoing/Backlog, or Rejected by Bank/SIT, after Prometeia marked it Ready for Test">
                 Reopened from RFT
               </th>
             </tr>

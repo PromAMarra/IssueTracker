@@ -261,7 +261,7 @@ describe('statusDurations', () => {
 });
 
 describe('reopenFromReadyForTestCount', () => {
-  it('counts leaving Ready for Test for Ongoing or Backlog, not the success paths', () => {
+  it('counts leaving Ready for Test for Ongoing, Backlog, or Rejected, not the success path', () => {
     const history = [
       { field: 'status', fromValue: 'backlog', toValue: 'ready_for_test' },
       { field: 'status', fromValue: 'ready_for_test', toValue: 'ongoing' }, // bounced back once
@@ -271,6 +271,14 @@ describe('reopenFromReadyForTestCount', () => {
       { field: 'status', fromValue: 'ready_for_test', toValue: 'closed' }, // success — not a bounce
     ];
     expect(reopenFromReadyForTestCount(history)).toBe(2);
+  });
+
+  it('counts Bank/SIT rejecting a Ready for Test ticket as a bounce too', () => {
+    const history = [
+      { field: 'status', fromValue: 'backlog', toValue: 'ready_for_test' },
+      { field: 'status', fromValue: 'ready_for_test', toValue: 'rejected' }, // confirmBankSitStatusChange
+    ];
+    expect(reopenFromReadyForTestCount(history)).toBe(1);
   });
 
   it('ignores non-status fields and tickets that never reached Ready for Test', () => {
